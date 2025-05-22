@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Note } from '@/types';
@@ -66,7 +67,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
         notesArea: '',
       });
     }
-  }, [noteToEdit, form, isOpen]); // re-run if isOpen changes, to reset form when dialog opens for new note
+  }, [noteToEdit, form, isOpen]); 
 
   const onSubmit = (data: NoteFormData) => {
     if (noteToEdit) {
@@ -80,22 +81,22 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { onOpenChange(open); if (!open) form.reset(); }}>
-      <DialogContent className="sm:max-w-[525px] bg-card text-card-foreground shadow-lg rounded-lg">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[550px] bg-card text-card-foreground shadow-xl rounded-xl border border-border">
+        <DialogHeader className="pb-2 pt-1">
           <DialogTitle className="text-2xl font-semibold">
             {noteToEdit ? 'Edit Note' : 'Create New Note'}
           </DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-2">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <FormField
               control={form.control}
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">Title</FormLabel>
+                  <FormLabel className="text-sm font-medium text-foreground/90">Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter note title" {...field} className="bg-background border-input"/>
+                    <Input placeholder="Enter note title (e.g., Project Phoenix Ideas)" {...field} className="bg-background border-input h-11"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -106,9 +107,9 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
               name="objective"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">Objective / Function</FormLabel>
+                  <FormLabel className="text-sm font-medium text-foreground/90">Objective / Function</FormLabel>
                   <FormControl>
-                    <Input placeholder="Describe the objective or function" {...field} className="bg-background border-input"/>
+                    <Input placeholder="What's the main goal or purpose?" {...field} className="bg-background border-input h-11"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -119,26 +120,26 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
               name="notesArea"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">Notes Area</FormLabel>
+                  <FormLabel className="text-sm font-medium text-foreground/90">Notes Area</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Enter your notes here..."
-                      rows={6}
+                      placeholder="Jot down your thoughts, details, and any relevant information here..."
+                      rows={7}
                       {...field}
-                      className="bg-background border-input min-h-[120px]"
+                      className="bg-background border-input min-h-[150px] text-base"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-5">
               <DialogClose asChild>
-                <Button type="button" variant="outline">
+                <Button type="button" variant="outline" size="lg">
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit" variant="default">
+              <Button type="submit" variant="default" size="lg">
                 {noteToEdit ? 'Save Changes' : 'Create Note'}
               </Button>
             </DialogFooter>

@@ -1,13 +1,12 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
 import { useNotes } from '@/contexts/NoteContext';
 import { suggestRelatedNotes, type SuggestRelatedNotesOutput } from '@/ai/flows/suggest-related-notes';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sparkles, AlertTriangle, Loader2 } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { Sparkles, AlertTriangle, Loader2, Brain } from 'lucide-react';
 
 export function AiSuggestions() {
   const { selectedNoteIdForAI, getNoteById, isLoading, setIsLoading } = useNotes();
@@ -25,12 +24,12 @@ export function AiSuggestions() {
           setError(null);
           setSuggestions(null);
           try {
-            const noteContent = `${note.title}\nObjective: ${note.objective}\nNotes: ${note.notesArea}`;
+            const noteContent = `Title: ${note.title}\nObjective: ${note.objective}\nNotes: ${note.notesArea}`;
             const result = await suggestRelatedNotes({ noteContent });
             setSuggestions(result);
           } catch (err) {
             console.error("Error fetching AI suggestions:", err);
-            setError("Failed to load suggestions. Please try again.");
+            setError("Failed to load suggestions. Please try again later.");
           } finally {
             setIsLoading(false);
           }
@@ -48,47 +47,49 @@ export function AiSuggestions() {
   }, [selectedNoteIdForAI, getNoteById, setIsLoading]);
 
   return (
-    <Card className="h-full flex flex-col shadow-lg rounded-lg bg-card text-card-foreground">
-      <CardHeader className="border-b border-border/50 pb-3">
+    <Card className="h-full flex flex-col shadow-xl rounded-xl bg-card text-card-foreground border border-border/70">
+      <CardHeader className="border-b border-border/60 pb-4 pt-5 px-5">
         <CardTitle className="flex items-center text-xl font-semibold">
-          <Sparkles className="mr-2 h-5 w-5 text-primary" />
-          AI Note Suggestions
+          <Brain className="mr-2.5 h-6 w-6 text-primary" />
+          AI Note Insights
         </CardTitle>
         {currentNoteTitle && (
-            <CardDescription className="text-xs text-muted-foreground pt-1">
-                Related to: "{currentNoteTitle}"
+            <CardDescription className="text-xs text-muted-foreground pt-1.5 pl-1">
+                Insights related to: "{currentNoteTitle}"
             </CardDescription>
         )}
       </CardHeader>
       <ScrollArea className="flex-1">
-        <CardContent className="p-4">
+        <CardContent className="p-5">
           {isLoading && (
-            <div className="flex flex-col items-center justify-center space-y-2 p-6 text-muted-foreground">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p>Loading suggestions...</p>
+            <div className="flex flex-col items-center justify-center space-y-3 p-8 text-muted-foreground">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="text-sm">Generating insights...</p>
             </div>
           )}
           {error && (
-            <div className="flex flex-col items-center justify-center space-y-2 p-6 text-destructive">
-              <AlertTriangle className="h-8 w-8" />
-              <p>{error}</p>
+            <div className="flex flex-col items-center justify-center space-y-3 p-8 text-destructive">
+              <AlertTriangle className="h-10 w-10" />
+              <p className="text-sm text-center">{error}</p>
             </div>
           )}
           {!isLoading && !error && !suggestions && !selectedNoteIdForAI && (
-            <div className="text-center text-muted-foreground p-6">
-              <p>Select a note and click the <Sparkles className="inline h-4 w-4 mx-1" /> icon on it to see related suggestions here.</p>
+            <div className="text-center text-muted-foreground p-8 space-y-3">
+              <Sparkles className="mx-auto h-10 w-10 text-primary/70" />
+              <p className="text-sm">Select a note and click the <Sparkles className="inline h-4 w-4 mx-0.5" /> icon on it to see related AI insights here.</p>
             </div>
           )}
           {!isLoading && !error && suggestions && suggestions.relatedNotes.length === 0 && (
-             <div className="text-center text-muted-foreground p-6">
-              <p>No specific suggestions found for this note.</p>
+             <div className="text-center text-muted-foreground p-8 space-y-3">
+              <Sparkles className="mx-auto h-10 w-10 text-primary/70" />
+              <p className="text-sm">No specific insights found for this note at the moment.</p>
             </div>
           )}
           {suggestions && suggestions.relatedNotes.length > 0 && (
-            <ul className="space-y-3">
+            <ul className="space-y-3.5">
               {suggestions.relatedNotes.map((suggestion, index) => (
-                <li key={index} className="p-3 border border-border rounded-md bg-accent/50 text-sm text-accent-foreground shadow-sm">
-                  <p className="whitespace-pre-wrap">{suggestion}</p>
+                <li key={index} className="p-3.5 border border-border/60 rounded-lg bg-background hover:bg-muted/30 transition-colors text-sm text-foreground/90 shadow-sm">
+                  <p className="whitespace-pre-wrap leading-relaxed">{suggestion}</p>
                 </li>
               ))}
             </ul>
