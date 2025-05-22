@@ -8,7 +8,7 @@ import { NoteList } from './NoteList';
 import { AiSuggestions } from './AiSuggestions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, PlusCircle, Search, Settings2, Sparkles } from 'lucide-react';
+import { Download, PlusCircle, Search, Sparkles } from 'lucide-react'; // Sparkles was missing
 import { convertNotesToCsv, downloadTextFile } from '@/lib/note-utils';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -64,7 +64,7 @@ export function NoteSphereApp() {
             </svg>
             <h1 className="text-2xl font-bold text-foreground">NoteSphere</h1>
           </div>
-          <div className="flex-1 max-w-md ml-auto">
+          <div className="flex-1 max-w-md"> {/* Removed ml-auto here */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
