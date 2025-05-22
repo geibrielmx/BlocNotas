@@ -4,8 +4,8 @@
 import type { Note } from '@/types';
 import { useNotes } from '@/contexts/NoteContext';
 import { NoteCard } from './NoteCard';
-import { AnimatePresence, motion } from 'framer-motion'; // For animations (optional, needs `npm install framer-motion`)
-import { escapeRegExp } from '@/lib/note-utils';
+// import { AnimatePresence, motion } from 'framer-motion'; // For animations (optional, needs `npm install framer-motion`)
+// No longer needed here: import { escapeRegExp } from '@/lib/note-utils';
 
 interface NoteListProps {
   onEditNote: (note: Note) => void;
@@ -21,22 +21,12 @@ export function NoteList({ onEditNote }: NoteListProps) {
         return true; // Show all notes if search term is empty or only whitespace
       }
 
-      // ID search: simple substring match (case-insensitive)
-      if (note.id.toLowerCase().includes(trimmedSearchTerm)) {
-        return true;
-      }
-
-      // Text fields search: whole word/phrase match (case-insensitive)
-      // Escape the search term to handle special regex characters safely
-      const escapedTerm = escapeRegExp(trimmedSearchTerm);
-      // Create a regex to match the search term as a whole word or phrase.
-      // \b denotes a word boundary. 'i' flag for case-insensitive search.
-      const searchRegex = new RegExp(`\\b${escapedTerm}\\b`, 'i');
-
+      // Perform a case-insensitive substring search on relevant fields
       return (
-        searchRegex.test(note.title) || // Test against original case, regex is case-insensitive
-        searchRegex.test(note.objective) ||
-        searchRegex.test(note.notesArea)
+        note.id.toLowerCase().includes(trimmedSearchTerm) ||
+        note.title.toLowerCase().includes(trimmedSearchTerm) ||
+        note.objective.toLowerCase().includes(trimmedSearchTerm) ||
+        note.notesArea.toLowerCase().includes(trimmedSearchTerm)
       );
     })
     .sort((a, b) => {
