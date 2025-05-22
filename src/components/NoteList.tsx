@@ -1,9 +1,11 @@
+// src/components/NoteList.tsx
 "use client";
 
 import type { Note } from '@/types';
 import { useNotes } from '@/contexts/NoteContext';
 import { NoteCard } from './NoteCard';
 import { AnimatePresence, motion } from 'framer-motion'; // For animations (optional, needs `npm install framer-motion`)
+import { escapeRegExp } from '@/lib/note-utils';
 
 interface NoteListProps {
   onEditNote: (note: Note) => void;
@@ -14,13 +16,27 @@ export function NoteList({ onEditNote }: NoteListProps) {
 
   const filteredNotes = notes
     .filter(note => {
-      if (!searchTerm) return true;
-      const lowerSearchTerm = searchTerm.toLowerCase();
+      const trimmedSearchTerm = searchTerm.trim().toLowerCase();
+      if (!trimmedSearchTerm) {
+        return true; // Show all notes if search term is empty or only whitespace
+      }
+
+      // ID search: simple substring match (case-insensitive)
+      if (note.id.toLowerCase().includes(trimmedSearchTerm)) {
+        return true;
+      }
+
+      // Text fields search: whole word/phrase match (case-insensitive)
+      // Escape the search term to handle special regex characters safely
+      const escapedTerm = escapeRegExp(trimmedSearchTerm);
+      // Create a regex to match the search term as a whole word or phrase.
+      // \b denotes a word boundary. 'i' flag for case-insensitive search.
+      const searchRegex = new RegExp(`\\b${escapedTerm}\\b`, 'i');
+
       return (
-        note.title.toLowerCase().includes(lowerSearchTerm) ||
-        note.objective.toLowerCase().includes(lowerSearchTerm) ||
-        note.notesArea.toLowerCase().includes(lowerSearchTerm) ||
-        note.id.toLowerCase().includes(lowerSearchTerm)
+        searchRegex.test(note.title) || // Test against original case, regex is case-insensitive
+        searchRegex.test(note.objective) ||
+        searchRegex.test(note.notesArea)
       );
     })
     .sort((a, b) => {
@@ -54,7 +70,7 @@ export function NoteList({ onEditNote }: NoteListProps) {
       {/* Consider using AnimatePresence if framer-motion is added, for smoother add/remove animations */}
       {filteredNotes.map(note => (
         // <motion.div key={note.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <NoteCard key={note.id} note={note} onEdit={() => onEditNote(note)} searchTerm={searchTerm} />
+          <NoteCard key={note.id} note={note} onEdit={() => onEditNote(note)} searchTerm={searchTerm.trim()} />
         // </motion.div>
       ))}
     </div>

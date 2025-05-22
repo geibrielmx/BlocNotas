@@ -48,3 +48,8 @@ export function downloadTextFile(filename: string, content: string): void {
   element.click();
   document.body.removeChild(element);
 }
+
+// Helper function to escape special characters for use in a regular expression
+export function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}

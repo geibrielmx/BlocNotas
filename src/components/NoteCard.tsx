@@ -1,3 +1,4 @@
+// src/components/NoteCard.tsx
 "use client";
 
 import type { Note } from '@/types';
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { formatDistanceToNow } from 'date-fns';
 import { useState } from 'react';
+import { escapeRegExp } from '@/lib/note-utils';
 
 interface NoteCardProps {
   note: Note;
@@ -27,13 +29,16 @@ interface NoteCardProps {
 }
 
 function HighlightedText({ text, highlight }: { text: string; highlight?: string }) {
-  if (!highlight || !text) {
+  if (!highlight || !text || highlight.trim() === '') {
     return <>{text}</>;
   }
-  const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+  // Escape the highlight term to be safely used in a RegExp
+  const escapedHighlight = escapeRegExp(highlight);
+  const parts = text.split(new RegExp(`(${escapedHighlight})`, 'gi'));
   return (
     <>
       {parts.map((part, i) =>
+        // Ensure the comparison for highlighting is case-insensitive and matches the original logic
         part.toLowerCase() === highlight.toLowerCase() ? (
           <mark key={i} className="bg-accent text-accent-foreground p-0.5 rounded">{part}</mark>
         ) : (
@@ -50,6 +55,7 @@ export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const formattedDate = formatDistanceToNow(new Date(note.createdAt), { addSuffix: true });
+  const displaySearchTerm = searchTerm?.trim();
 
   return (
     <Card className="w-full shadow-md hover:shadow-lg transition-shadow duration-200 ease-in-out bg-card text-card-foreground rounded-lg">
@@ -57,7 +63,7 @@ export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-xl font-semibold mb-1">
-              <HighlightedText text={note.title} highlight={searchTerm} />
+              <HighlightedText text={note.title} highlight={displaySearchTerm} />
             </CardTitle>
             <CardDescription className="text-xs text-muted-foreground">
               ID: {note.id} &bull; Created {formattedDate}
@@ -70,13 +76,13 @@ export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
         <div>
           <h4 className="text-sm font-medium text-muted-foreground mb-1">Objective:</h4>
           <p className="text-sm leading-relaxed">
-            <HighlightedText text={note.objective} highlight={searchTerm} />
+            <HighlightedText text={note.objective} highlight={displaySearchTerm} />
           </p>
         </div>
         <div>
           <h4 className="text-sm font-medium text-muted-foreground mb-1">Notes:</h4>
           <p className={`text-sm leading-relaxed ${!isExpanded && 'line-clamp-3'}`}>
-            <HighlightedText text={note.notesArea} highlight={searchTerm} />
+            <HighlightedText text={note.notesArea} highlight={displaySearchTerm} />
           </p>
           {note.notesArea.length > 150 && ( // Arbitrary length to show expand button
              <Button variant="link" size="sm" onClick={() => setIsExpanded(!isExpanded)} className="p-0 h-auto text-primary">
