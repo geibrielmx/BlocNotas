@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/form';
 import { useNotes } from '@/contexts/NoteContext';
 import { useEffect } from 'react';
+import { FilePenLine, Edit } from 'lucide-react';
 
 const noteSchema = z.object({
   title: z.string().min(1, 'Title is required').max(100, 'Title must be 100 characters or less'),
@@ -54,18 +56,20 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   });
 
   useEffect(() => {
-    if (noteToEdit) {
-      form.reset({
-        title: noteToEdit.title,
-        objective: noteToEdit.objective,
-        notesArea: noteToEdit.notesArea,
-      });
-    } else {
-      form.reset({
-        title: '',
-        objective: '',
-        notesArea: '',
-      });
+    if (isOpen) { // Reset form only when dialog opens or noteToEdit changes
+      if (noteToEdit) {
+        form.reset({
+          title: noteToEdit.title,
+          objective: noteToEdit.objective,
+          notesArea: noteToEdit.notesArea,
+        });
+      } else {
+        form.reset({
+          title: '',
+          objective: '',
+          notesArea: '',
+        });
+      }
     }
   }, [noteToEdit, form, isOpen]); 
 
@@ -76,19 +80,31 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
       addNote(data);
     }
     onOpenChange(false);
-    form.reset();
+    // form.reset(); // Resetting is handled by useEffect now
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    onOpenChange(open);
+    if (!open) {
+      // Optionally reset form on close if not submitted, though useEffect handles open.
+      // form.reset(); 
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { onOpenChange(open); if (!open) form.reset(); }}>
-      <DialogContent className="sm:max-w-[550px] bg-card text-card-foreground shadow-xl rounded-xl border border-border">
-        <DialogHeader className="pb-2 pt-1">
-          <DialogTitle className="text-2xl font-semibold">
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-[600px] bg-card text-card-foreground shadow-xl rounded-lg border border-border/90">
+        <DialogHeader className="pb-3 pt-2 px-1">
+          <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+            {noteToEdit ? <Edit className="h-5 w-5 text-primary" /> : <FilePenLine className="h-5 w-5 text-primary" />}
             {noteToEdit ? 'Edit Note' : 'Create New Note'}
           </DialogTitle>
+          <DialogDescription className="text-sm pt-0.5">
+            {noteToEdit ? 'Modify the details of your existing note.' : 'Fill in the details to create a new note.'}
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-1">
             <FormField
               control={form.control}
               name="title"
@@ -96,7 +112,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-foreground/90">Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter note title (e.g., Project Phoenix Ideas)" {...field} className="bg-background border-input h-11"/>
+                    <Input placeholder="e.g., Marketing Campaign Q3 Ideas" {...field} className="bg-input border-border focus:border-primary h-10 text-sm"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -109,7 +125,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-foreground/90">Objective / Function</FormLabel>
                   <FormControl>
-                    <Input placeholder="What's the main goal or purpose?" {...field} className="bg-background border-input h-11"/>
+                    <Input placeholder="e.g., Brainstorm key strategies and deliverables" {...field} className="bg-input border-border focus:border-primary h-10 text-sm"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -123,23 +139,23 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                   <FormLabel className="text-sm font-medium text-foreground/90">Notes Area</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Jot down your thoughts, details, and any relevant information here..."
-                      rows={7}
+                      placeholder="Jot down your thoughts, details, code snippets, and any relevant information..."
+                      rows={6}
                       {...field}
-                      className="bg-background border-input min-h-[150px] text-base"
+                      className="bg-input border-border focus:border-primary min-h-[120px] text-sm leading-relaxed"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <DialogFooter className="pt-5">
+            <DialogFooter className="pt-4 gap-2 sm:gap-0">
               <DialogClose asChild>
-                <Button type="button" variant="outline" size="lg">
+                <Button type="button" variant="outline" size="default">
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit" variant="default" size="lg">
+              <Button type="submit" variant="default" size="default">
                 {noteToEdit ? 'Save Changes' : 'Create Note'}
               </Button>
             </DialogFooter>
