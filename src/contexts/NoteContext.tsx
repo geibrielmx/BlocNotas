@@ -101,8 +101,6 @@ export function NoteProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // ADVERTENCIA: Este parseador de CSV es simple y puede fallar con campos que contienen saltos de línea
-      // incluso si están correctamente entrecomillados, debido al split inicial por líneas.
       const lines = csvString.trim().split(/\r?\n/);
       
       if (lines.length === 0) {
@@ -126,9 +124,9 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       if (headerMismatch) {
         toast({ 
           title: "Error de Formato en Cabeceras", 
-          description: `Las cabeceras del archivo no coinciden. Esperadas: "${expectedHeaders.join(',')}". Encontradas: "${parsedHeader.join(',')}". Asegúrate de que la primera línea contenga las cabeceras correctas y que el archivo use comas como delimitadores.`, 
+          description: `Las cabeceras del archivo no coinciden. Esperadas: "${expectedHeaders.join(',')}". Encontradas: "${parsedHeader.join(',')}". Asegúrate de que la primera línea contenga las cabeceras correctas, que el archivo use comas como delimitadores y que no haya saltos de línea inesperados antes de las cabeceras.`, 
           variant: "destructive",
-          duration: 10000 
+          duration: 12000 
         });
         return;
       }
@@ -146,7 +144,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
   
       for (let i = 0; i < dataRows.length; i++) {
         const rowString = dataRows[i];
-        if (rowString.trim() === '') continue; // Skip empty lines
+        if (rowString.trim() === '') continue; 
 
         const fields = parseCsvRow(rowString);
   
@@ -154,9 +152,9 @@ export function NoteProvider({ children }: { children: ReactNode }) {
           console.warn(`Fila ${i + 2}: Se omitió fila por número incorrecto de campos. Esperados: ${expectedHeaders.length}, Encontrados: ${fields.length}. Contenido: "${rowString}"`);
           toast({ 
             title: "Advertencia de Importación", 
-            description: `Se omitió la fila ${i + 2} del archivo debido a un formato incorrecto (número de campos no coincide).`, 
+            description: `Se omitió la fila ${i + 2} del archivo. Esto puede ocurrir si el formato es incorrecto o si una nota contiene saltos de línea internos en sus campos, lo cual no es soportado por este importador simple.`, 
             variant: "default",
-            duration: 7000
+            duration: 9000
           });
           skippedRowCount++;
           continue;
@@ -188,7 +186,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       }
 
       if (notesFromImportProcessing.length === 0 && skippedRowCount > 0) {
-        toast({ title: "Importación Fallida", description: `No se pudieron importar notas. Se omitieron ${skippedRowCount} filas debido a errores de formato. Revisa el archivo CSV.`, variant: "destructive", duration: 10000 });
+        toast({ title: "Importación Fallida", description: `No se pudieron importar notas válidas. Se omitieron ${skippedRowCount} filas debido a errores de formato. Revisa el archivo CSV, especialmente por saltos de línea dentro de los campos de texto.`, variant: "destructive", duration: 12000 });
         return;
       }
       if (notesFromImportProcessing.length === 0 && skippedRowCount === 0 && dataRows.length > 0) {
@@ -218,9 +216,9 @@ export function NoteProvider({ children }: { children: ReactNode }) {
   
       let summaryMessage = `${importedCount} notas importadas, ${updatedCount} notas actualizadas.`;
       if (skippedRowCount > 0) {
-        summaryMessage += ` ${skippedRowCount} filas fueron omitidas por errores.`;
+        summaryMessage += ` ${skippedRowCount} filas fueron omitidas (posiblemente por saltos de línea internos en campos de texto o formato incorrecto).`;
       }
-      toast({ title: "Importación Completada", description: summaryMessage, duration: 7000 });
+      toast({ title: "Importación Completada", description: summaryMessage, duration: 9000 });
   
     } catch (error) {
       console.error("Error al importar notas:", error);
@@ -269,3 +267,4 @@ export function useNotes() {
   }
   return context;
 }
+
