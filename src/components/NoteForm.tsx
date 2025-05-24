@@ -26,8 +26,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useNotes } from '@/contexts/NoteContext';
-import { useEffect } from 'react';
-import { FilePenLine, Edit } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { FilePenLine, Edit, Bold, Italic, List, ListOrdered, Code, SquareCode, LinkIcon } from 'lucide-react';
 
 const noteSchema = z.object({
   title: z.string().min(1, 'El título es obligatorio').max(100, 'El título debe tener 100 caracteres o menos'),
@@ -45,6 +45,7 @@ interface NoteFormProps {
 
 export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   const { addNote, updateNote } = useNotes();
+  const notesAreaRef = useRef<HTMLTextAreaElement>(null);
   
   const form = useForm<NoteFormData>({
     resolver: zodResolver(noteSchema),
@@ -85,6 +86,111 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   const handleOpenChange = (open: boolean) => {
     onOpenChange(open);
   };
+
+  const applyMarkdownFormatting = (syntaxStart: string, syntaxEnd: string = '', placeholderText: string = 'texto') => {
+    const textarea = notesAreaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentText = textarea.value;
+    const selectedText = currentText.substring(start, end);
+    
+    let newTextValue;
+    let cursorStart;
+    let cursorEnd;
+
+    if (selectedText) {
+      newTextValue = `${currentText.substring(0, start)}${syntaxStart}${selectedText}${syntaxEnd}${currentText.substring(end)}`;
+      cursorStart = start + syntaxStart.length + selectedText.length + syntaxEnd.length;
+      cursorEnd = cursorStart;
+    } else {
+      newTextValue = `${currentText.substring(0, start)}${syntaxStart}${placeholderText}${syntaxEnd}${currentText.substring(end)}`;
+      cursorStart = start + syntaxStart.length;
+      cursorEnd = cursorStart + placeholderText.length;
+    }
+    
+    form.setValue('notesArea', newTextValue, { shouldValidate: true, shouldDirty: true });
+
+    // We need to wait for React to update the textarea's value in the DOM
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(cursorStart, cursorEnd);
+    }, 0);
+  };
+
+  const applyListFormatting = (prefix: string) => {
+    const textarea = notesAreaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentText = textarea.value;
+    const selectedText = currentText.substring(start, end);
+    
+    let newTextValue;
+    let finalCursorPosition;
+
+    if (selectedText) {
+      const lines = selectedText.split('\n');
+      // Add prefix to each line, ensuring no double prefix if line already starts with it or similar list item
+      const formattedLines = lines.map(line => {
+          const trimmedLine = line.trimStart();
+          if (trimmedLine.startsWith('- ') || trimmedLine.match(/^\d+\.\s/)) {
+              return line; // Avoid double-prefixing existing list items
+          }
+          return `${prefix}${line}`;
+      }).join('\n');
+      
+      newTextValue = `${currentText.substring(0, start)}${formattedLines}${currentText.substring(end)}`;
+      finalCursorPosition = start + formattedLines.length;
+    } else {
+      // Insert prefix at the start of the current line or new line if at the end
+      let lineStartIndex = start;
+      while(lineStartIndex > 0 && currentText[lineStartIndex -1] !== '\n') {
+        lineStartIndex--;
+      }
+      const textBeforeCursorLine = currentText.substring(0, lineStartIndex);
+      const textAfterCursorLine = currentText.substring(lineStartIndex);
+      
+      newTextValue = `${textBeforeCursorLine}${prefix}${textAfterCursorLine}`;
+      finalCursorPosition = lineStartIndex + prefix.length + (start - lineStartIndex);
+
+    }
+    
+    form.setValue('notesArea', newTextValue, { shouldValidate: true, shouldDirty: true });
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(finalCursorPosition, finalCursorPosition);
+    }, 0);
+  };
+
+
+  const markdownToolbar = (
+    <div className="flex flex-wrap gap-1 mb-2 p-1 border border-border rounded-md bg-background shadow-sm">
+      <Button type="button" variant="outline" size="sm" className="px-2 h-8" onClick={() => applyMarkdownFormatting('**', '**', 'negrita')} title="Negrita (Ctrl+B)">
+        <Bold className="h-4 w-4" />
+      </Button>
+      <Button type="button" variant="outline" size="sm" className="px-2 h-8" onClick={() => applyMarkdownFormatting('*', '*', 'cursiva')} title="Cursiva (Ctrl+I)">
+        <Italic className="h-4 w-4" />
+      </Button>
+      <Button type="button" variant="outline" size="sm" className="px-2 h-8" onClick={() => applyListFormatting('- ')} title="Lista no ordenada">
+        <List className="h-4 w-4" />
+      </Button>
+      <Button type="button" variant="outline" size="sm" className="px-2 h-8" onClick={() => applyListFormatting('1. ')} title="Lista ordenada">
+        <ListOrdered className="h-4 w-4" />
+      </Button>
+      <Button type="button" variant="outline" size="sm" className="px-2 h-8" onClick={() => applyMarkdownFormatting('`', '`', 'código')} title="Código en línea">
+        <Code className="h-4 w-4" />
+      </Button>
+      <Button type="button" variant="outline" size="sm" className="px-2 h-8" onClick={() => applyMarkdownFormatting('```\n', '\n```', 'bloque de código')} title="Bloque de código">
+        <SquareCode className="h-4 w-4" />
+      </Button>
+      <Button type="button" variant="outline" size="sm" className="px-2 h-8" onClick={() => applyMarkdownFormatting('[', '](url)', 'texto del enlace')} title="Enlace">
+        <LinkIcon className="h-4 w-4" />
+      </Button>
+    </div>
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -132,8 +238,10 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-foreground/90">Área de Notas</FormLabel>
+                  {markdownToolbar}
                   <FormControl>
                     <Textarea
+                      ref={notesAreaRef}
                       placeholder="Anota tus ideas, detalles, fragmentos de código y cualquier información relevante... Puedes usar Markdown para formatear, ¡incluyendo tablas!"
                       rows={8}
                       {...field}
