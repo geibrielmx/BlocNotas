@@ -9,7 +9,7 @@ import { NoteList } from './NoteList';
 import { AiSuggestions } from './AiSuggestions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, PlusCircle, Search, Sparkles, Upload, Eraser, Save } from 'lucide-react';
+import { Download, PlusCircle, Search, Sparkles, Upload, Eraser, Save, BookOpenText } from 'lucide-react';
 import { convertNotesToCsv, downloadTextFile } from '@/lib/note-utils';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -29,7 +29,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-const APP_VERSION = "v1.3.0"; 
+const APP_VERSION = "v1.4.0"; 
 
 export function NoteSphereApp() {
   const { notes, searchTerm, setSearchTerm, importNotes, clearAllNotes } = useNotes();
@@ -120,95 +120,90 @@ export function NoteSphereApp() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <header className="p-5 border-b border-border/80 bg-card shadow-sm sticky top-0 z-10">
-        <div className="container mx-auto flex items-center justify-between gap-x-4 md:gap-x-6">
-          <div className="flex items-center gap-2.5 shrink-0">
-            <svg role="img" aria-label="Logo Bloc de Notas Pro" className="h-8 w-8 md:h-9 md:w-9 text-primary" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM4 12C4 7.58172 7.58172 4 12 4C16.4183 4 20 7.58172 20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12Z" opacity="0.3"/>
-              <path d="M8 9C8 8.44772 8.44772 8 9 8H15C15.5523 8 16 8.44772 16 9V15C16 15.5523 15.5523 16 15 16H9C8.44772 16 8 15.5523 8 15V9Z"/>
-              <path d="M10 10H14V11H10V10Z"/>
-              <path d="M10 13H14V14H10V13Z"/>
-            </svg>
+        <div className="container mx-auto flex flex-col gap-y-3">
+          {/* Fila 1: Logo y Título */}
+          <div className="flex items-center justify-start gap-2.5">
+            <BookOpenText className="h-8 w-8 md:h-9 md:w-9 text-primary" />
             <h1 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">Bloc de Notas Pro</h1>
           </div>
-          
-          <div className="flex-1 min-w-0 max-w-xl">
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Buscar notas..."
-                className="pl-11 pr-4 w-full bg-input border-border focus:ring-primary rounded-lg shadow-sm h-10 text-sm"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
+
+          {/* Fila 2: Búsqueda y Botones */}
+          <div className="flex items-center justify-between gap-x-4 md:gap-x-6">
+            <div className="flex-1 min-w-0 max-w-xl">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Buscar notas..."
+                  className="pl-11 pr-4 w-full bg-input border-border focus:ring-primary rounded-lg shadow-sm h-10 text-sm"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 md:gap-3">
-            <Button onClick={handleAddNewNote} variant="default" size="default" className="shadow-sm">
-              <PlusCircle className="mr-1.5 h-4.5 w-4.5" />
-              <span className="hidden sm:inline">Añadir Nota</span>
-              <span className="sm:hidden">Añadir</span>
-            </Button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileSelected}
-              accept=".txt,.csv"
-              className="hidden"
-            />
-            <Button onClick={handleImportButtonClick} variant="outline" size="default" className="shadow-sm">
-              <Upload className="mr-1.5 h-4.5 w-4.5" />
-              <span className="hidden sm:inline">Importar</span>
-            </Button>
-             <Button onClick={handleSaveChanges} variant="outline" size="default" className="shadow-sm">
-              <Save className="mr-1.5 h-4.5 w-4.5" />
-              <span className="hidden sm:inline">Guardar</span>
-            </Button>
-            <Button onClick={handleExportNotes} variant="outline" size="default" className="shadow-sm">
-              <Download className="mr-1.5 h-4.5 w-4.5" />
-              <span className="hidden sm:inline">Exportar</span>
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="default" className="shadow-sm">
-                  <Eraser className="mr-1.5 h-4.5 w-4.5" />
-                  <span className="hidden sm:inline">Limpiar Todo</span>
-                   <span className="sm:hidden">Limpiar</span>
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta acción no se puede deshacer. Se eliminarán permanentemente TODAS tus notas.
-                    ¿Estás seguro de que quieres continuar?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleClearAllNotesConfirmed}
-                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                  >
-                    Sí, eliminar todas las notas
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <Button onClick={handleAddNewNote} variant="default" size="default" className="shadow-sm">
+                <PlusCircle className="mr-1.5 h-4.5 w-4.5" />
+                <span className="hidden sm:inline">Añadir Nota</span>
+                <span className="sm:hidden">Añadir</span>
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelected}
+                accept=".txt,.csv"
+                className="hidden"
+              />
+              <Button onClick={handleSaveChanges} variant="outline" size="sm" className="shadow-sm">
+                <Save className="mr-1.5 h-4 w-4" />
+                <span className="hidden sm:inline">Guardar</span>
+              </Button>
+              <Button onClick={handleExportNotes} variant="outline" size="sm" className="shadow-sm">
+                <Download className="mr-1.5 h-4 w-4" />
+                <span className="hidden sm:inline">Exportar</span>
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" className="shadow-sm">
+                    <Eraser className="mr-1.5 h-4 w-4" />
+                    <span className="hidden sm:inline">Limpiar Todo</span>
+                    <span className="sm:hidden">Limpiar</span>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción no se puede deshacer. Se eliminarán permanentemente TODAS tus notas.
+                      ¿Estás seguro de que quieres continuar?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleClearAllNotesConfirmed}
+                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                    >
+                      Sí, eliminar todas las notas
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
-             <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden h-10 w-10" aria-label="Abrir/Cerrar Panel IA">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[clamp(300px,80vw,420px)] p-0 bg-card border-l border-border shadow-xl">
-                 <div className="h-full flex flex-col">
-                    <AiSuggestions />
-                  </div>
-              </SheetContent>
-            </Sheet>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" aria-label="Abrir/Cerrar Panel IA">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[clamp(300px,80vw,420px)] p-0 bg-card border-l border-border shadow-xl">
+                  <div className="h-full flex flex-col">
+                      <AiSuggestions />
+                    </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </div>
       </header>
@@ -325,3 +320,4 @@ export function NoteSphereApp() {
   );
 }
 
+    
