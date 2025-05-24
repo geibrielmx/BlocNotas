@@ -1,3 +1,4 @@
+
 import { type Note } from '@/types';
 import { format } from 'date-fns';
 
@@ -17,10 +18,13 @@ export function generateNoteId(existingNotes: Note[]): string {
   return `${todayStr}${newSeq}`;
 }
 
-function escapeCsvField(field: string): string {
+function escapeCsvField(field: unknown): string {
   // Ensure field is a string before processing
-  const stringField = String(field ?? ''); 
-  if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n') || stringField.includes('\r')) {
+  let stringField = String(field ?? ''); 
+  // Normalize newlines to \n before quoting for consistency
+  stringField = stringField.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  
+  if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
     return `"${stringField.replace(/"/g, '""')}"`;
   }
   return stringField;
@@ -35,7 +39,7 @@ export function convertNotesToCsv(notes: Note[]): string {
       escapeCsvField(note.objective),
       escapeCsvField(note.notesArea),
       escapeCsvField(note.createdAt),
-      escapeCsvField(String(note.isPinned)),
+      escapeCsvField(note.isPinned), // Booleans will be converted to "true" or "false" strings
     ].join(',')
   );
   return [headers.join(','), ...rows].join('\n');
@@ -55,15 +59,22 @@ export function escapeRegExp(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
 }
 
+// Parses a single row of CSV. This parser is simple and has limitations,
+// especially with newlines within unquoted fields or complex quote escaping.
 export function parseCsvRow(row: string): string[] {
   const result: string[] = [];
   let currentField = '';
   let inQuotes = false;
+
+  if (row === null || row === undefined) {
+    return []; // Handle null or undefined rows
+  }
+
   for (let i = 0; i < row.length; i++) {
     const char = row[i];
     if (char === '"') {
       if (inQuotes && i + 1 < row.length && row[i + 1] === '"') {
-        // Escaped quote "”"
+        // Escaped double quote
         currentField += '"';
         i++; // Skip next quote
       } else {
@@ -80,6 +91,7 @@ export function parseCsvRow(row: string): string[] {
   return result;
 }
 
+
 export function highlightTextInMarkdown(text: string, highlight?: string): string {
   if (!highlight || !text || highlight.trim() === '') {
     return text;
@@ -90,5 +102,6 @@ export function highlightTextInMarkdown(text: string, highlight?: string): strin
   const escapedHighlight = escapeRegExp(searchTerm);
   const regex = new RegExp(`(${escapedHighlight})`, 'gi');
   
-  return text.replace(regex, `<mark class="bg-yellow-300 text-black p-0.5 rounded-sm">$1</mark>`);
+  // Ensure text is a string before replacing
+  return String(text).replace(regex, `<mark class="bg-yellow-300 text-black p-0.5 rounded-sm">$1</mark>`);
 }

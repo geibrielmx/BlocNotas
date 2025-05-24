@@ -95,16 +95,24 @@ export function NoteProvider({ children }: { children: ReactNode }) {
   }, [notes]);
 
   const importNotes = useCallback((csvString: string) => {
+    if (!csvString || csvString.trim() === '') {
+      toast({ title: "Importación Vacía", description: "El archivo seleccionado está vacío o no contiene texto.", variant: "default" });
+      return;
+    }
+
     try {
-      const lines = csvString.trim().split(/\r?\n/); 
-      if (lines.length < 1) { 
-        toast({ title: "Información de Importación", description: "El archivo está vacío o no contiene datos.", variant: "default" });
+      // ADVERTENCIA: Este parseador de CSV es simple y puede fallar con campos que contienen saltos de línea
+      // incluso si están correctamente entrecomillados, debido al split inicial por líneas.
+      const lines = csvString.trim().split(/\r?\n/);
+      
+      if (lines.length === 0) {
+        toast({ title: "Archivo Vacío", description: "El archivo no contiene líneas de datos.", variant: "default" });
         return;
       }
   
       const expectedHeaders = ['ID', 'Title', 'Objective', 'NotesArea', 'CreatedAt', 'IsPinned'];
       const parsedHeader = parseCsvRow(lines[0]);
-  
+      
       let headerMismatch = parsedHeader.length !== expectedHeaders.length;
       if (!headerMismatch) {
         for (let i = 0; i < expectedHeaders.length; i++) {
@@ -116,48 +124,78 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       }
   
       if (headerMismatch) {
-        toast({ title: "Error de Importación", description: `Formato de archivo inválido. Cabeceras esperadas: ${expectedHeaders.join(', ')}. Encontradas: ${parsedHeader.join(', ')}. Asegúrate de que la primera línea contenga las cabeceras correctas.`, variant: "destructive" });
+        toast({ 
+          title: "Error de Formato en Cabeceras", 
+          description: `Las cabeceras del archivo no coinciden. Esperadas: "${expectedHeaders.join(',')}". Encontradas: "${parsedHeader.join(',')}". Asegúrate de que la primera línea contenga las cabeceras correctas y que el archivo use comas como delimitadores.`, 
+          variant: "destructive",
+          duration: 10000 
+        });
         return;
       }
       
       if (lines.length < 2) {
-        toast({ title: "Información de Importación", description: "El archivo solo contiene cabeceras. No hay datos para importar.", variant: "default" });
+        toast({ title: "Sin Datos para Importar", description: "El archivo solo contiene cabeceras. No hay notas para importar.", variant: "default" });
         return;
       }
 
       const dataRows = lines.slice(1);
       let importedCount = 0;
       let updatedCount = 0;
+      let skippedRowCount = 0;
       const notesFromImportProcessing: Note[] = []; 
   
-      for (const row of dataRows) {
-        if (row.trim() === '') continue;
-        const fields = parseCsvRow(row);
+      for (let i = 0; i < dataRows.length; i++) {
+        const rowString = dataRows[i];
+        if (rowString.trim() === '') continue; // Skip empty lines
+
+        const fields = parseCsvRow(rowString);
   
         if (fields.length !== expectedHeaders.length) {
-          console.warn("Omitiendo fila malformada:", row);
-          toast({ title: "Advertencia de Importación", description: "Se omitió una fila con formato incorrecto en el CSV.", variant: "default" });
+          console.warn(`Fila ${i + 2}: Se omitió fila por número incorrecto de campos. Esperados: ${expectedHeaders.length}, Encontrados: ${fields.length}. Contenido: "${rowString}"`);
+          toast({ 
+            title: "Advertencia de Importación", 
+            description: `Se omitió la fila ${i + 2} del archivo debido a un formato incorrecto (número de campos no coincide).`, 
+            variant: "default",
+            duration: 7000
+          });
+          skippedRowCount++;
           continue;
         }
         
-        const [id, title, objective, notesArea, createdAt, isPinnedStr] = fields;
+        const [id, title, objective, notesArea, createdAt, isPinnedStr] = fields.map(f => f.trim());
         
         const importedNote: Note = {
-          id: id.trim(),
-          title: title.trim(),
-          objective: objective.trim(),
-          notesArea: notesArea.trim(),
-          createdAt: createdAt.trim(),
-          isPinned: isPinnedStr.trim().toLowerCase() === 'true',
+          id: id,
+          title: title,
+          objective: objective,
+          notesArea: notesArea,
+          createdAt: createdAt,
+          isPinned: isPinnedStr.toLowerCase() === 'true',
         };
   
         if (isNaN(new Date(importedNote.createdAt).getTime())) {
-          console.warn(`Omitiendo fila con fecha inválida: ${importedNote.createdAt}`, importedNote);
-          toast({ title: "Advertencia de Importación", description: `Se omitió la nota "${importedNote.title || importedNote.id}" debido a una fecha de creación inválida.`, variant: "default" });
+          console.warn(`Fila ${i + 2}: Se omitió nota con fecha inválida: "${importedNote.createdAt}". Título: "${importedNote.title}"`);
+          toast({ 
+            title: "Advertencia de Importación", 
+            description: `Se omitió la nota "${importedNote.title || importedNote.id}" (fila ${i + 2}) debido a una fecha de creación inválida.`, 
+            variant: "default",
+            duration: 7000
+          });
+          skippedRowCount++;
           continue;
         }
         notesFromImportProcessing.push(importedNote);
       }
+
+      if (notesFromImportProcessing.length === 0 && skippedRowCount > 0) {
+        toast({ title: "Importación Fallida", description: `No se pudieron importar notas. Se omitieron ${skippedRowCount} filas debido a errores de formato. Revisa el archivo CSV.`, variant: "destructive", duration: 10000 });
+        return;
+      }
+      if (notesFromImportProcessing.length === 0 && skippedRowCount === 0 && dataRows.length > 0) {
+        toast({ title: "Sin Notas Válidas", description: "No se encontraron notas válidas para importar en el archivo después de las cabeceras.", variant: "default" });
+        return;
+      }
+
 
       setNotes(prevNotes => {
         let currentNotesMap = new Map(prevNotes.map(note => [note.id, note]));
@@ -178,11 +216,15 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         });
       });
   
-      toast({ title: "Importación Completa", description: `${importedCount} notas importadas, ${updatedCount} notas actualizadas.` });
+      let summaryMessage = `${importedCount} notas importadas, ${updatedCount} notas actualizadas.`;
+      if (skippedRowCount > 0) {
+        summaryMessage += ` ${skippedRowCount} filas fueron omitidas por errores.`;
+      }
+      toast({ title: "Importación Completada", description: summaryMessage, duration: 7000 });
   
     } catch (error) {
       console.error("Error al importar notas:", error);
-      toast({ title: "Importación Fallida", description: "Ocurrió un error al importar las notas. Revisa la consola para más detalles.", variant: "destructive" });
+      toast({ title: "Error Crítico de Importación", description: "Ocurrió un error inesperado al procesar el archivo. Revisa la consola para más detalles.", variant: "destructive" });
     }
   }, [setNotes, toast]); 
 

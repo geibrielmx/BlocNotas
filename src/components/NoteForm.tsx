@@ -45,7 +45,7 @@ interface NoteFormProps {
 
 export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   const { addNote, updateNote } = useNotes();
-  const notesAreaRef = useRef<HTMLTextAreaElement>(null);
+  const notesAreaRef = useRef<HTMLTextAreaElement | null>(null);
   
   const form = useForm<NoteFormData>({
     resolver: zodResolver(noteSchema),
@@ -112,7 +112,6 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
     
     form.setValue('notesArea', newTextValue, { shouldValidate: true, shouldDirty: true });
 
-    // We need to wait for React to update the textarea's value in the DOM
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(cursorStart, cursorEnd);
@@ -133,11 +132,10 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
 
     if (selectedText) {
       const lines = selectedText.split('\n');
-      // Add prefix to each line, ensuring no double prefix if line already starts with it or similar list item
       const formattedLines = lines.map(line => {
           const trimmedLine = line.trimStart();
           if (trimmedLine.startsWith('- ') || trimmedLine.match(/^\d+\.\s/)) {
-              return line; // Avoid double-prefixing existing list items
+              return line; 
           }
           return `${prefix}${line}`;
       }).join('\n');
@@ -145,17 +143,23 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
       newTextValue = `${currentText.substring(0, start)}${formattedLines}${currentText.substring(end)}`;
       finalCursorPosition = start + formattedLines.length;
     } else {
-      // Insert prefix at the start of the current line or new line if at the end
       let lineStartIndex = start;
       while(lineStartIndex > 0 && currentText[lineStartIndex -1] !== '\n') {
         lineStartIndex--;
       }
       const textBeforeCursorLine = currentText.substring(0, lineStartIndex);
-      const textAfterCursorLine = currentText.substring(lineStartIndex);
-      
-      newTextValue = `${textBeforeCursorLine}${prefix}${textAfterCursorLine}`;
-      finalCursorPosition = lineStartIndex + prefix.length + (start - lineStartIndex);
+      let textAfterCursorLine = currentText.substring(lineStartIndex);
 
+      // Add prefix, ensuring not to double-prefix if the line already looks like a list item
+      const currentLineContent = textAfterCursorLine.split('\n')[0];
+      if (currentLineContent.trimStart().startsWith('- ') || currentLineContent.trimStart().match(/^\d+\.\s/)) {
+         // If already a list item, just move cursor or insert newline + prefix if at end of item
+        newTextValue = `${textBeforeCursorLine}${currentLineContent}\n${prefix}${textAfterCursorLine.substring(currentLineContent.length)}`;
+        finalCursorPosition = start + prefix.length + 1; // after the newline and prefix
+      } else {
+        newTextValue = `${textBeforeCursorLine}${prefix}${textAfterCursorLine}`;
+        finalCursorPosition = lineStartIndex + prefix.length + (start - lineStartIndex);
+      }
     }
     
     form.setValue('notesArea', newTextValue, { shouldValidate: true, shouldDirty: true });
@@ -241,10 +245,13 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                   {markdownToolbar}
                   <FormControl>
                     <Textarea
-                      ref={notesAreaRef}
+                      {...field} // RHF field props, including its ref
+                      ref={(e) => {
+                        field.ref(e); // Call RHF's ref function
+                        notesAreaRef.current = e; // Assign to your manual ref
+                      }}
                       placeholder="Anota tus ideas, detalles, fragmentos de código y cualquier información relevante... Puedes usar Markdown para formatear, ¡incluyendo tablas!"
                       rows={8}
-                      {...field}
                       className="bg-input border-border focus:border-primary min-h-[150px] text-sm leading-relaxed"
                     />
                   </FormControl>
