@@ -58,10 +58,16 @@ Si es aplicable, los 'details' pueden incluir:
 - Posibles expansiones del tema de la nota.
 - Sugerencias para mejorar la claridad o el contenido de la nota.
 
-Estructura tu salida de acuerdo con el esquema proporcionado. Si el contenido de la nota es demasiado vago o corto, proporciona indicaciones creativas generales o sugerencias para expandir la nota.
+**Instrucción Especial:**
+Si el 'Contenido de la Nota' es muy breve (por ejemplo, solo una o dos palabras como "NEM" o "Python loops") y no proporciona suficiente contexto para generar sugerencias directamente relacionadas con un proyecto o nota específica:
+1.  **Asume que el contenido de la nota es un tema o palabra clave sobre el que el usuario desea obtener información general, ejemplos o ideas iniciales.**
+2.  **Actúa como si hubieras realizado una búsqueda en Internet sobre ese tema/palabra clave.**
+3.  **Genera sugerencias basadas en el conocimiento común o la información típica que se encontraría para ese tema.** Estas pueden incluir definiciones, casos de uso comunes, ejemplos de sintaxis, comandos relevantes, o puntos de partida para investigar más a fondo.
+
+Estructura tu salida de acuerdo con el esquema proporcionado.
 Asegúrate de que tu respuesta esté en español.
 Genera al menos 2 ideas, y como máximo 5.
-Si la nota parece estar relacionada con programación, intenta proporcionar ejemplos de código o sintaxis relevantes.
+Si la nota parece estar relacionada con programación (incluso si es solo un término corto), intenta proporcionar ejemplos de código o sintaxis relevantes.
 Si la nota es sobre escritura o ideas generales, ofrece sugerencias de lluvia de ideas o mejoras.
 `,
 });
