@@ -143,8 +143,8 @@ export function NoteSphereApp() {
             </div>
 
             <div className="flex items-center gap-1.5 md:gap-2">
-              <Button onClick={handleAddNewNote} variant="default" size="default" className="shadow-sm">
-                <PlusCircle className="mr-1.5 h-4.5 w-4.5" />
+              <Button onClick={handleAddNewNote} variant="default" size="sm" className="shadow-sm">
+                <PlusCircle className="mr-1.5 h-4 w-4" />
                 <span className="hidden sm:inline">Añadir Nota</span>
                 <span className="sm:hidden">Añadir</span>
               </Button>
@@ -155,6 +155,10 @@ export function NoteSphereApp() {
                 accept=".txt,.csv"
                 className="hidden"
               />
+              <Button onClick={handleImportButtonClick} variant="outline" size="sm" className="shadow-sm">
+                <Upload className="mr-1.5 h-4 w-4" />
+                <span className="hidden sm:inline">Importar</span>
+              </Button>
               <Button onClick={handleSaveChanges} variant="outline" size="sm" className="shadow-sm">
                 <Save className="mr-1.5 h-4 w-4" />
                 <span className="hidden sm:inline">Guardar</span>
