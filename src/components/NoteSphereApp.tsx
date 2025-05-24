@@ -29,7 +29,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-const APP_VERSION = "v1.4.0"; 
+const APP_VERSION = "v1.4.1"; 
 
 export function NoteSphereApp() {
   const { notes, searchTerm, setSearchTerm, importNotes, clearAllNotes } = useNotes();
@@ -119,34 +119,33 @@ export function NoteSphereApp() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <header className="p-5 border-b border-border/80 bg-card shadow-sm sticky top-0 z-10">
-        <div className="container mx-auto flex flex-col gap-y-3">
+      <header className="p-4 md:p-5 border-b border-border/80 bg-card shadow-sm sticky top-0 z-10">
+        <div className="container mx-auto flex flex-col gap-y-3 md:gap-y-4">
           {/* Fila 1: Logo y Título */}
           <div className="flex items-center justify-start gap-2.5">
-            <BookOpenText className="h-8 w-8 md:h-9 md:w-9 text-primary" />
-            <h1 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">Bloc de Notas Pro</h1>
+            <BookOpenText className="h-7 w-7 md:h-8 md:w-8 text-primary" />
+            <h1 className="text-xl md:text-2xl font-semibold text-foreground tracking-tight">Bloc de Notas Pro</h1>
           </div>
 
           {/* Fila 2: Búsqueda y Botones */}
-          <div className="flex items-center justify-between gap-x-4 md:gap-x-6">
-            <div className="flex-1 min-w-0 max-w-xl">
+          <div className="flex flex-col gap-y-3 sm:flex-row sm:items-center sm:justify-between sm:gap-x-4">
+            <div className="flex-1 min-w-0"> {/* Contenedor de búsqueda con min-w-0 */}
               <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Buscar notas..."
-                  className="pl-11 pr-4 w-full bg-input border-border focus:ring-primary rounded-lg shadow-sm h-10 text-sm"
+                  className="pl-10 pr-3 w-full bg-input border-border focus:ring-primary rounded-lg shadow-sm h-9 md:h-10 text-sm"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 md:gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-start sm:justify-end">
               <Button onClick={handleAddNewNote} variant="default" size="sm" className="shadow-sm">
-                <PlusCircle className="mr-1.5 h-4 w-4" />
+                <PlusCircle className="h-4 w-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Añadir Nota</span>
-                <span className="sm:hidden">Añadir</span>
               </Button>
               <input
                 type="file"
@@ -156,23 +155,22 @@ export function NoteSphereApp() {
                 className="hidden"
               />
               <Button onClick={handleImportButtonClick} variant="outline" size="sm" className="shadow-sm">
-                <Upload className="mr-1.5 h-4 w-4" />
+                <Upload className="h-4 w-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Importar</span>
               </Button>
               <Button onClick={handleSaveChanges} variant="outline" size="sm" className="shadow-sm">
-                <Save className="mr-1.5 h-4 w-4" />
+                <Save className="h-4 w-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Guardar</span>
               </Button>
               <Button onClick={handleExportNotes} variant="outline" size="sm" className="shadow-sm">
-                <Download className="mr-1.5 h-4 w-4" />
+                <Download className="h-4 w-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Exportar</span>
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm" className="shadow-sm">
-                    <Eraser className="mr-1.5 h-4 w-4" />
+                    <Eraser className="h-4 w-4 sm:mr-1.5" />
                     <span className="hidden sm:inline">Limpiar Todo</span>
-                    <span className="sm:hidden">Limpiar</span>
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -286,18 +284,22 @@ export function NoteSphereApp() {
         .markdown-content code {
           background-color: hsl(var(--muted));
           padding: 0.2em 0.4em;
-          border-radius: var(--radius-sm);
+          border-radius: 3px; /* más sutil */
           font-family: var(--font-geist-mono);
+          font-size: 0.9em; /* ligeramente más pequeño */
         }
         .markdown-content pre {
           background-color: hsl(var(--muted));
-          padding: 1em;
+          padding: 0.8em 1em; /* ajuste de padding */
           border-radius: var(--radius-md);
           overflow-x: auto;
+          border: 1px solid hsl(var(--border)); /* borde sutil */
         }
         .markdown-content pre code {
           background-color: transparent;
           padding: 0;
+          font-size: 0.875em; /* ajuste de tamaño para bloques */
+          border: none; /* sin borde para el código dentro de pre */
         }
         .markdown-content blockquote {
           border-left: 4px solid hsl(var(--border));
@@ -323,5 +325,3 @@ export function NoteSphereApp() {
     </div>
   );
 }
-
-    

@@ -52,7 +52,7 @@ Contenido de la Nota:
 **INSTRUCCIÓN FUNDAMENTAL Y CRÍTICA:**
 
 **CASO 1: La nota es una consulta directa sobre un término específico.**
-   Identifica este caso si el 'Contenido de la Nota' consiste principalmente en un término en el campo "Título" (por ejemplo, "kubectl", "Python loops", "NEM", "marketing digital") y los campos "Objetivo" y "Notas" están vacíos, son muy breves o genéricos.
+   Identifica este caso si el 'Contenido de la Nota' consiste principalmente en un término en el campo "Título" (por ejemplo, "kubectl", "Python loops", "NEM", "marketing digital") y los campos "Objetivo" y "Notas" están vacíos, son muy breves o genéricos (ej. "aprender", "investigar").
 
    **SI ESTE ES EL CASO:**
    1.  **NO RESPONDAS** bajo ninguna circunstancia con frases como "todo está bien", "la nota parece estar en buen camino", "no hay sugerencias adicionales" o cualquier variación que implique que la nota está completa o no necesita información. Esto es incorrecto y no ayuda al usuario. Tu respuesta en este caso NUNCA debe ser un array de ideas vacío si el término del título es consultable.
@@ -98,31 +98,29 @@ const suggestRelatedNotesFlow = ai.defineFlow(
   },
   async input => {
     try {
-      const {output} = await suggestRelatedNotesPrompt(input);
-      // Asegurarse de que el output no sea null y que ideas sea un array.
-      // Si el LLM no devuelve ideas, podemos devolver un array vacío para evitar errores en el frontend.
+      const {output} = await prompt(input);
+      
       if (!output || !Array.isArray(output.ideas)) {
           console.warn('La IA no devolvió ideas válidas o el formato es incorrecto. Se devuelve un array vacío. Output recibido:', JSON.stringify(output, null, 2));
           return { ideas: [] };
       }
-      // Si la IA devuelve un array de ideas vacío explícitamente:
+      
+      // Log para identificar si la IA devuelve un array vacío intencionadamente
       if (output.ideas.length === 0) {
-        const isLikelyDirectQuery = input.noteContent.trim().endsWith("Objetivo: \nNotas:"); // Heurística simple
-        const titleOnlyPattern = /^Título: [^\n]+\nObjetivo:(\s*)\nNotas:(\s*)$/; // Más específico para Título solo
-        const isTitleOnlyQuery = titleOnlyPattern.test(input.noteContent.trim());
+        // Heurística para determinar si la entrada parece una consulta directa (CASO 1)
+        const titleOnlyPattern = /^Título: [^\n]+(\nObjetivo:(\s*)\nNotas:(\s*))?$/i;
+        const isLikelyDirectQuery = titleOnlyPattern.test(input.noteContent.trim());
 
-        if (isTitleOnlyQuery || (isLikelyDirectQuery && input.noteContent.split('\n').length <= 3) ) {
-          console.warn('La IA devolvió un array de ideas vacío para lo que parece ser una consulta directa (CASO 1). Input:', input.noteContent, 'Output:', JSON.stringify(output, null, 2));
+        if (isLikelyDirectQuery) {
+          console.warn(`CASO 1 DETECTADO (QUERY): La IA devolvió un array de ideas vacío para lo que parece ser una consulta directa. Esto no debería ocurrir. Input: "${input.noteContent}", Output:`, JSON.stringify(output, null, 2));
         } else {
-          console.warn('La IA devolvió un array de ideas vacío para una nota elaborada (CASO 2). Input:', input.noteContent, 'Output:', JSON.stringify(output, null, 2));
+          // Es una nota más elaborada (CASO 2)
+          console.warn(`CASO 2 DETECTADO (NOTA ELABORADA): La IA devolvió un array de ideas vacío. Input: "${input.noteContent}", Output:`, JSON.stringify(output, null, 2));
         }
       }
       return output;
     } catch (error) {
-      console.error("Error dentro de suggestRelatedNotesFlow:", error);
-      // Si hay un error en el flujo (ej. problema con la API de Genkit/Google),
-      // devolvemos un objeto que cumple el esquema pero con ideas vacías para que el frontend lo maneje.
-      // El error ya se logueó, el frontend mostrará su propio mensaje de error genérico.
+      console.error("Error crítico dentro de suggestRelatedNotesFlow:", error);
       return { ideas: [] };
     }
   }
