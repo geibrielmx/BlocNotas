@@ -20,7 +20,8 @@ interface NoteContextType {
   getNoteById: (id: string) => Note | undefined;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
-  importNotes: (csvString: string) => void; // Added for import
+  importNotes: (csvString: string) => void;
+  clearAllNotes: () => void; // Added for clearing all notes
 }
 
 const NoteContext = createContext<NoteContextType | undefined>(undefined);
@@ -64,10 +65,13 @@ export function NoteProvider({ children }: { children: ReactNode }) {
   const deleteNote = useCallback((id: string) => {
     const noteToDelete = notes.find(n => n.id === id);
     setNotes(prevNotes => prevNotes.filter(note => note.id !== id));
+    if (selectedNoteIdForAI === id) {
+        setSelectedNoteIdForAI(null);
+    }
     if (noteToDelete) {
      toast({ title: "Note Deleted", description: `Note "${noteToDelete.title}" has been deleted.`, variant: "destructive" });
     }
-  }, [notes, setNotes, toast]);
+  }, [notes, setNotes, toast, selectedNoteIdForAI, setSelectedNoteIdForAI]);
 
   const togglePinNote = useCallback((id: string) => {
     const noteToToggle = notes.find(n => n.id === id);
@@ -92,8 +96,8 @@ export function NoteProvider({ children }: { children: ReactNode }) {
 
   const importNotes = useCallback((csvString: string) => {
     try {
-      const lines = csvString.trim().split(/\r?\n/); // Handles both \n and \r\n
-      if (lines.length < 1) { // Allow empty file or file with only header
+      const lines = csvString.trim().split(/\r?\n/); 
+      if (lines.length < 1) { 
         toast({ title: "Import Info", description: "File is empty or contains no data.", variant: "default" });
         return;
       }
@@ -124,7 +128,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       const dataRows = lines.slice(1);
       let importedCount = 0;
       let updatedCount = 0;
-      const notesFromImportProcessing: Note[] = []; // Store all processed notes from CSV
+      const notesFromImportProcessing: Note[] = []; 
   
       for (const row of dataRows) {
         if (row.trim() === '') continue;
@@ -180,7 +184,17 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       console.error("Error importing notes:", error);
       toast({ title: "Import Failed", description: "An error occurred while importing notes. Check console for details.", variant: "destructive" });
     }
-  }, [setNotes, toast]); // Removed 'notes' from dependencies to use the freshest state from setNotes callback
+  }, [setNotes, toast]); 
+
+  const clearAllNotes = useCallback(() => {
+    setNotes([]);
+    setSelectedNoteIdForAI(null); // Also clear any AI selection
+    toast({
+      title: "All Notes Cleared",
+      description: "Your NoteSphere is now empty.",
+      variant: "destructive", 
+    });
+  }, [setNotes, toast, setSelectedNoteIdForAI]);
 
   return (
     <NoteContext.Provider
@@ -198,6 +212,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         isLoading,
         setIsLoading,
         importNotes,
+        clearAllNotes, // Provide the new function
       }}
     >
       {children}

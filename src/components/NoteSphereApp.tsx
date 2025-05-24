@@ -9,7 +9,7 @@ import { NoteList } from './NoteList';
 import { AiSuggestions } from './AiSuggestions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, PlusCircle, Search, Sparkles, Upload } from 'lucide-react';
+import { Download, PlusCircle, Search, Sparkles, Upload, Eraser } from 'lucide-react';
 import { convertNotesToCsv, downloadTextFile } from '@/lib/note-utils';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -17,11 +17,22 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-const APP_VERSION = "v1.0.0";
+const APP_VERSION = "v1.1.0"; // Incremented version
 
 export function NoteSphereApp() {
-  const { notes, searchTerm, setSearchTerm, importNotes } = useNotes();
+  const { notes, searchTerm, setSearchTerm, importNotes, clearAllNotes } = useNotes();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [noteToEdit, setNoteToEdit] = useState<Note | null>(null);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
@@ -80,11 +91,15 @@ export function NoteSphereApp() {
         toast({ title: "Import Error", description: "Failed to read the file.", variant: "destructive" });
       };
       reader.readAsText(file);
-      // Reset file input to allow importing the same file again if needed
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     }
+  };
+
+  const handleClearAllNotesConfirmed = () => {
+    clearAllNotes();
+    // Toast is handled within the context's clearAllNotes function
   };
 
 
@@ -133,6 +148,34 @@ export function NoteSphereApp() {
               <Download className="mr-1.5 h-4.5 w-4.5" />
               <span className="hidden sm:inline">Export</span>
             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="default" className="shadow-sm">
+                  <Eraser className="mr-1.5 h-4.5 w-4.5" />
+                  <span className="hidden sm:inline">Clear All</span>
+                   <span className="sm:hidden">Clear</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete ALL your notes.
+                    Are you sure you want to proceed?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleClearAllNotesConfirmed}
+                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                  >
+                    Yes, delete all notes
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
              <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="md:hidden h-10 w-10" aria-label="Toggle AI Panel">
