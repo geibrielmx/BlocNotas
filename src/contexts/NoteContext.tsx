@@ -21,7 +21,7 @@ interface NoteContextType {
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   importNotes: (csvString: string) => void;
-  clearAllNotes: () => void; // Added for clearing all notes
+  clearAllNotes: () => void;
 }
 
 const NoteContext = createContext<NoteContextType | undefined>(undefined);
@@ -47,7 +47,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         if (!a.isPinned && b.isPinned) return 1;
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }));
-    toast({ title: "Note Created", description: `Note "${newNote.title}" has been successfully created.` });
+    toast({ title: "Nota Creada", description: `La nota "${newNote.title}" se ha creado correctamente.` });
   }, [notes, setNotes, toast]);
 
   const updateNote = useCallback((updatedNote: Note) => {
@@ -59,7 +59,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       })
     );
-    toast({ title: "Note Updated", description: `Note "${updatedNote.title}" has been successfully updated.` });
+    toast({ title: "Nota Actualizada", description: `La nota "${updatedNote.title}" se ha actualizado correctamente.` });
   }, [setNotes, toast]);
 
   const deleteNote = useCallback((id: string) => {
@@ -69,7 +69,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         setSelectedNoteIdForAI(null);
     }
     if (noteToDelete) {
-     toast({ title: "Note Deleted", description: `Note "${noteToDelete.title}" has been deleted.`, variant: "destructive" });
+     toast({ title: "Nota Eliminada", description: `La nota "${noteToDelete.title}" ha sido eliminada.`, variant: "destructive" });
     }
   }, [notes, setNotes, toast, selectedNoteIdForAI, setSelectedNoteIdForAI]);
 
@@ -86,7 +86,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       })
     );
     if (noteToToggle) {
-      toast({ title: noteToToggle.isPinned ? "Note Unpinned" : "Note Pinned", description: `Note "${noteToToggle.title}" has been ${noteToToggle.isPinned ? "unpinned" : "pinned"}.` });
+      toast({ title: noteToToggle.isPinned ? "Nota Desfijada" : "Nota Fijada", description: `La nota "${noteToToggle.title}" ha sido ${noteToToggle.isPinned ? "desfijada" : "fijada"}.` });
     }
   }, [notes, setNotes, toast]);
 
@@ -98,7 +98,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
     try {
       const lines = csvString.trim().split(/\r?\n/); 
       if (lines.length < 1) { 
-        toast({ title: "Import Info", description: "File is empty or contains no data.", variant: "default" });
+        toast({ title: "Información de Importación", description: "El archivo está vacío o no contiene datos.", variant: "default" });
         return;
       }
   
@@ -116,12 +116,12 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       }
   
       if (headerMismatch) {
-        toast({ title: "Import Error", description: `Invalid file format. Expected headers: ${expectedHeaders.join(', ')}. Found: ${parsedHeader.join(', ')}. Please ensure the first line contains the correct headers.`, variant: "destructive" });
+        toast({ title: "Error de Importación", description: `Formato de archivo inválido. Cabeceras esperadas: ${expectedHeaders.join(', ')}. Encontradas: ${parsedHeader.join(', ')}. Asegúrate de que la primera línea contenga las cabeceras correctas.`, variant: "destructive" });
         return;
       }
       
       if (lines.length < 2) {
-        toast({ title: "Import Info", description: "File contains only headers. No data to import.", variant: "default" });
+        toast({ title: "Información de Importación", description: "El archivo solo contiene cabeceras. No hay datos para importar.", variant: "default" });
         return;
       }
 
@@ -135,8 +135,8 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         const fields = parseCsvRow(row);
   
         if (fields.length !== expectedHeaders.length) {
-          console.warn("Skipping malformed row:", row);
-          toast({ title: "Import Warning", description: "Skipped a malformed row in the CSV.", variant: "default" });
+          console.warn("Omitiendo fila malformada:", row);
+          toast({ title: "Advertencia de Importación", description: "Se omitió una fila con formato incorrecto en el CSV.", variant: "default" });
           continue;
         }
         
@@ -152,8 +152,8 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         };
   
         if (isNaN(new Date(importedNote.createdAt).getTime())) {
-          console.warn(`Skipping row with invalid date: ${importedNote.createdAt}`, importedNote);
-          toast({ title: "Import Warning", description: `Skipped note "${importedNote.title || importedNote.id}" due to invalid creation date.`, variant: "default" });
+          console.warn(`Omitiendo fila con fecha inválida: ${importedNote.createdAt}`, importedNote);
+          toast({ title: "Advertencia de Importación", description: `Se omitió la nota "${importedNote.title || importedNote.id}" debido a una fecha de creación inválida.`, variant: "default" });
           continue;
         }
         notesFromImportProcessing.push(importedNote);
@@ -178,20 +178,20 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         });
       });
   
-      toast({ title: "Import Complete", description: `${importedCount} notes imported, ${updatedCount} notes updated.` });
+      toast({ title: "Importación Completa", description: `${importedCount} notas importadas, ${updatedCount} notas actualizadas.` });
   
     } catch (error) {
-      console.error("Error importing notes:", error);
-      toast({ title: "Import Failed", description: "An error occurred while importing notes. Check console for details.", variant: "destructive" });
+      console.error("Error al importar notas:", error);
+      toast({ title: "Importación Fallida", description: "Ocurrió un error al importar las notas. Revisa la consola para más detalles.", variant: "destructive" });
     }
   }, [setNotes, toast]); 
 
   const clearAllNotes = useCallback(() => {
     setNotes([]);
-    setSelectedNoteIdForAI(null); // Also clear any AI selection
+    setSelectedNoteIdForAI(null);
     toast({
-      title: "All Notes Cleared",
-      description: "Your NoteSphere is now empty.",
+      title: "Todas las Notas Eliminadas",
+      description: "Tu Bloc de Notas ahora está vacío.",
       variant: "destructive", 
     });
   }, [setNotes, toast, setSelectedNoteIdForAI]);
@@ -212,7 +212,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         isLoading,
         setIsLoading,
         importNotes,
-        clearAllNotes, // Provide the new function
+        clearAllNotes,
       }}
     >
       {children}
@@ -223,7 +223,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
 export function useNotes() {
   const context = useContext(NoteContext);
   if (context === undefined) {
-    throw new Error('useNotes must be used within a NoteProvider');
+    throw new Error('useNotes debe usarse dentro de un NoteProvider');
   }
   return context;
 }

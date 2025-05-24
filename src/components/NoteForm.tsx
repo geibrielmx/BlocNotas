@@ -30,9 +30,9 @@ import { useEffect } from 'react';
 import { FilePenLine, Edit } from 'lucide-react';
 
 const noteSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(100, 'Title must be 100 characters or less'),
-  objective: z.string().min(1, 'Objective is required').max(200, 'Objective must be 200 characters or less'),
-  notesArea: z.string().min(1, 'Notes area cannot be empty'),
+  title: z.string().min(1, 'El título es obligatorio').max(100, 'El título debe tener 100 caracteres o menos'),
+  objective: z.string().min(1, 'El objetivo es obligatorio').max(200, 'El objetivo debe tener 200 caracteres o menos'),
+  notesArea: z.string().min(1, 'El área de notas no puede estar vacía'),
 });
 
 type NoteFormData = z.infer<typeof noteSchema>;
@@ -56,7 +56,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   });
 
   useEffect(() => {
-    if (isOpen) { // Reset form only when dialog opens or noteToEdit changes
+    if (isOpen) { 
       if (noteToEdit) {
         form.reset({
           title: noteToEdit.title,
@@ -80,15 +80,10 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
       addNote(data);
     }
     onOpenChange(false);
-    // form.reset(); // Resetting is handled by useEffect now
   };
 
   const handleOpenChange = (open: boolean) => {
     onOpenChange(open);
-    if (!open) {
-      // Optionally reset form on close if not submitted, though useEffect handles open.
-      // form.reset(); 
-    }
   };
 
   return (
@@ -97,10 +92,10 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
         <DialogHeader className="pb-3 pt-2 px-1">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             {noteToEdit ? <Edit className="h-5 w-5 text-primary" /> : <FilePenLine className="h-5 w-5 text-primary" />}
-            {noteToEdit ? 'Edit Note' : 'Create New Note'}
+            {noteToEdit ? 'Editar Nota' : 'Crear Nueva Nota'}
           </DialogTitle>
           <DialogDescription className="text-sm pt-0.5">
-            {noteToEdit ? 'Modify the details of your existing note.' : 'Fill in the details to create a new note.'}
+            {noteToEdit ? 'Modifica los detalles de tu nota existente.' : 'Completa los detalles para crear una nueva nota.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -110,9 +105,9 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground/90">Title</FormLabel>
+                  <FormLabel className="text-sm font-medium text-foreground/90">Título</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Marketing Campaign Q3 Ideas" {...field} className="bg-input border-border focus:border-primary h-10 text-sm"/>
+                    <Input placeholder="ej., Ideas Campaña Marketing Q3" {...field} className="bg-input border-border focus:border-primary h-10 text-sm"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -123,9 +118,9 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
               name="objective"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground/90">Objective / Function</FormLabel>
+                  <FormLabel className="text-sm font-medium text-foreground/90">Objetivo / Función</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Brainstorm key strategies and deliverables" {...field} className="bg-input border-border focus:border-primary h-10 text-sm"/>
+                    <Input placeholder="ej., Lluvia de ideas sobre estrategias y entregables clave" {...field} className="bg-input border-border focus:border-primary h-10 text-sm"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -136,13 +131,13 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
               name="notesArea"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground/90">Notes Area</FormLabel>
+                  <FormLabel className="text-sm font-medium text-foreground/90">Área de Notas</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Jot down your thoughts, details, code snippets, and any relevant information..."
-                      rows={6}
+                      placeholder="Anota tus ideas, detalles, fragmentos de código y cualquier información relevante... Puedes usar Markdown para formatear, ¡incluyendo tablas!"
+                      rows={8}
                       {...field}
-                      className="bg-input border-border focus:border-primary min-h-[120px] text-sm leading-relaxed"
+                      className="bg-input border-border focus:border-primary min-h-[150px] text-sm leading-relaxed"
                     />
                   </FormControl>
                   <FormMessage />
@@ -152,11 +147,11 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
             <DialogFooter className="pt-4 gap-2 sm:gap-0">
               <DialogClose asChild>
                 <Button type="button" variant="outline" size="default">
-                  Cancel
+                  Cancelar
                 </Button>
               </DialogClose>
               <Button type="submit" variant="default" size="default">
-                {noteToEdit ? 'Save Changes' : 'Create Note'}
+                {noteToEdit ? 'Guardar Cambios' : 'Crear Nota'}
               </Button>
             </DialogFooter>
           </form>

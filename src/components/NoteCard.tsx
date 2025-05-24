@@ -21,6 +21,8 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { useState } from 'react';
 import { escapeRegExp } from '@/lib/note-utils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface NoteCardProps {
   note: Note;
@@ -54,7 +56,7 @@ export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
 
   const formattedDate = formatDistanceToNow(new Date(note.createdAt), { addSuffix: true });
   const displaySearchTerm = searchTerm?.trim();
-  const notesPreviewLength = 180; // Characters to show before "Show more"
+  const notesPreviewLength = 180; 
 
   return (
     <Card className="w-full shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out bg-card text-card-foreground rounded-lg border border-border/80 overflow-hidden flex flex-col">
@@ -65,7 +67,7 @@ export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
               <HighlightedText text={note.title} highlight={displaySearchTerm} />
             </CardTitle>
             <CardDescription className="text-xs text-muted-foreground">
-              Created {formattedDate} <span className="mx-1">&bull;</span> ID: {note.id}
+              Creado {formattedDate} <span className="mx-1">&bull;</span> ID: {note.id}
             </CardDescription>
           </div>
           {note.isPinned && <Pin className="h-4.5 w-4.5 text-primary flex-shrink-0 mt-0.5" />}
@@ -73,20 +75,23 @@ export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
       </CardHeader>
       <CardContent className="space-y-3.5 py-4 px-5 flex-1">
         <div>
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Objective:</h4>
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Objetivo:</h4>
           <p className="text-sm leading-relaxed text-foreground/90 line-clamp-3">
             <HighlightedText text={note.objective} highlight={displaySearchTerm} />
           </p>
         </div>
         <div className="border-t border-border/50 pt-3">
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Notes:</h4>
-          <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Notas:</h4>
+          <div className="text-sm leading-relaxed text-foreground/90 markdown-content">
             {isExpanded ? (
-              <HighlightedText text={note.notesArea} highlight={displaySearchTerm} />
+               <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {note.notesArea}
+              </ReactMarkdown>
             ) : (
               <>
-                <HighlightedText text={note.notesArea.substring(0, notesPreviewLength)} highlight={displaySearchTerm} />
-                {note.notesArea.length > notesPreviewLength && '...'}
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {note.notesArea.substring(0, notesPreviewLength) + (note.notesArea.length > notesPreviewLength ? '...' : '')}
+                </ReactMarkdown>
               </>
             )}
           </div>
@@ -98,7 +103,7 @@ export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
                 className="p-0 h-auto text-primary hover:text-primary/80 text-xs mt-1.5 flex items-center gap-1"
               >
              {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-             {isExpanded ? 'Show less' : 'Show more'}
+             {isExpanded ? 'Mostrar menos' : 'Mostrar más'}
            </Button>
           )}
         </div>
@@ -108,8 +113,8 @@ export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
           variant="ghost"
           size="icon"
           onClick={() => togglePinNote(note.id)}
-          aria-label={note.isPinned ? 'Unpin note' : 'Pin note'}
-          title={note.isPinned ? 'Unpin note' : 'Pin note'}
+          aria-label={note.isPinned ? 'Desfijar nota' : 'Fijar nota'}
+          title={note.isPinned ? 'Desfijar nota' : 'Fijar nota'}
           className="text-muted-foreground hover:text-primary hover:bg-primary/10 w-8 h-8"
         >
           {note.isPinned ? <PinOff className="h-4 w-4 text-primary" /> : <Pin className="h-4 w-4" />}
@@ -118,8 +123,8 @@ export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
           variant="ghost"
           size="icon"
           onClick={() => onEdit(note)}
-          aria-label="Edit note"
-          title="Edit note"
+          aria-label="Editar nota"
+          title="Editar nota"
           className="text-muted-foreground hover:text-accent-foreground hover:bg-accent/50 w-8 h-8"
         >
           <Edit3 className="h-4 w-4" />
@@ -128,30 +133,30 @@ export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
           variant="ghost"
           size="icon"
           onClick={() => setSelectedNoteIdForAI(note.id)}
-          aria-label="AI Insights"
-          title="AI Insights"
+          aria-label="Ideas IA"
+          title="Ideas IA"
           className="text-muted-foreground hover:text-primary hover:bg-primary/10 w-8 h-8"
         >
           <Sparkles className="h-4 w-4 text-primary" />
         </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Delete note" title="Delete note" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 w-8 h-8">
+            <Button variant="ghost" size="icon" aria-label="Eliminar nota" title="Eliminar nota" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 w-8 h-8">
               <Trash2 className="h-4 w-4" />
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent className="border border-border shadow-xl rounded-lg">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-lg">Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogTitle className="text-lg">¿Estás completamente seguro?</AlertDialogTitle>
               <AlertDialogDescription className="text-base">
-                This action cannot be undone. This will permanently delete the note titled:
+                Esta acción no se puede deshacer. Se eliminará permanentemente la nota titulada:
                 <strong className="block mt-1 font-medium text-foreground">"{note.title}"</strong>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-2">
-              <AlertDialogCancel className="px-4 py-2 text-sm">Cancel</AlertDialogCancel>
+              <AlertDialogCancel className="px-4 py-2 text-sm">Cancelar</AlertDialogCancel>
               <AlertDialogAction onClick={() => deleteNote(note.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-4 py-2 text-sm">
-                Yes, delete note
+                Sí, eliminar nota
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
