@@ -55,7 +55,7 @@ Contenido de la Nota:
    Identifica este caso si el 'Contenido de la Nota' consiste principalmente en un término en el campo "Título" (por ejemplo, "kubectl", "Python loops", "NEM", "marketing digital") y los campos "Objetivo" y "Notas" están vacíos, son muy breves o genéricos.
 
    **SI ESTE ES EL CASO:**
-   1.  **NO RESPONDAS** bajo ninguna circunstancia con frases como "todo está bien", "la nota parece estar en buen camino", "no hay sugerencias adicionales" o cualquier variación que implique que la nota está completa o no necesita información. Esto es incorrecto y no ayuda al usuario.
+   1.  **NO RESPONDAS** bajo ninguna circunstancia con frases como "todo está bien", "la nota parece estar en buen camino", "no hay sugerencias adicionales" o cualquier variación que implique que la nota está completa o no necesita información. Esto es incorrecto y no ayuda al usuario. Tu respuesta en este caso NUNCA debe ser un array de ideas vacío si el término del título es consultable.
    2.  **TU MISIÓN ES PROPORCIONAR INFORMACIÓN ÚTIL Y ACCIONABLE SOBRE ESE TÉRMINO ESPECÍFICO DEL TÍTULO.** Actúa como si el usuario te hubiera preguntado directamente sobre ese término.
    3.  Genera entre 2 y 5 ideas informativas sobre el término. Cada idea debe tener un 'title' y 'details' significativos y bien elaborados:
        *   **Si el término es técnico/de programación** (ej. "kubectl", "git command", "React hooks"):
@@ -66,6 +66,7 @@ Contenido de la Nota:
            *   Una idea podría ser "Introducción a [término]" con una breve definición en 'details'.
            *   Otras ideas pueden ofrecer "Puntos Clave de [término]", "Áreas de Estudio en [término]", "Ejemplos de [término] en la Práctica", o "Recursos para Aprender Más".
    4.  Asegúrate de que el campo 'details' sea lo suficientemente explicativo y útil.
+   5.  **CRUCIAL PARA EL CASO 1**: Tu salida para este caso DEBE ser un objeto JSON con una clave "ideas", que es un array de objetos (entre 2 y 5 objetos). Cada objeto idea DEBE tener las claves "title" (string) y "details" (string). El campo "type" es opcional. NO devuelvas texto plano. NO devuelvas un array de "ideas" vacío si el término del título es algo sobre lo que se puede generar información (como "kubectl", "NEM", etc.).
 
 **CASO 2: La nota es más elaborada y contiene detalles.**
    Si el 'Contenido de la Nota' es más extenso, con información en "Objetivo" y/o "Notas", y no es solo un término breve en el título:
@@ -82,9 +83,9 @@ Contenido de la Nota:
    5.  Genera entre 2 y 5 ideas.
 
 **PARA TODAS LAS RESPUESTAS (AMBOS CASOS):**
-*   Estructura tu salida rigurosamente de acuerdo con el esquema JSON proporcionado: un objeto con una clave "ideas" que es un array de objetos. Cada objeto dentro del array debe tener las claves "title" (string) y "details" (string), y opcionalmente "type" (string).
+*   Excepto cuando se indique lo contrario en el CASO 1, estructura tu salida rigurosamente de acuerdo con el esquema JSON proporcionado: un objeto con una clave "ideas" que es un array de objetos. Cada objeto dentro del array debe tener las claves "title" (string) y "details" (string), y opcionalmente "type" (string).
 *   Asegúrate de que tu respuesta esté completamente en **español**.
-*   Si la nota, incluso si es breve, está relacionada con programación, tecnología o comandos, esfuérzate por proporcionar ejemplos de código, comandos o sintaxis relevantes en los 'details', formateados correctamente con Markdown.
+*   Si la nota, incluso si es breve (y estás en CASO 1), está relacionada con programación, tecnología o comandos, esfuérzate por proporcionar ejemplos de código, comandos o sintaxis relevantes en los 'details', formateados correctamente con Markdown.
 `,
 });
 
@@ -100,8 +101,13 @@ const suggestRelatedNotesFlow = ai.defineFlow(
       // Asegurarse de que el output no sea null y que ideas sea un array.
       // Si el LLM no devuelve ideas, podemos devolver un array vacío para evitar errores en el frontend.
       if (!output || !Array.isArray(output.ideas)) {
-          console.warn('La IA no devolvió ideas válidas o el formato es incorrecto. Se devuelve un array vacío. Output recibido:', output);
+          console.warn('La IA no devolvió ideas válidas o el formato es incorrecto. Se devuelve un array vacío. Output recibido:', JSON.stringify(output, null, 2));
           return { ideas: [] };
+      }
+      // Si la IA devuelve un array de ideas vacío explícitamente, y el input era probablemente una consulta (ej. solo título),
+      // esto podría indicar un fallo del prompt en el CASO 1.
+      if (output.ideas.length === 0 && input.noteContent.includes("Objetivo: \nNotas: ")) {
+        console.warn('La IA devolvió un array de ideas vacío para lo que parece ser una consulta directa (CASO 1). Input:', input.noteContent);
       }
       return output;
     } catch (error) {
