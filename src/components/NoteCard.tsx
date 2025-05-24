@@ -40,7 +40,7 @@ function HighlightedText({ text, highlight }: { text: string; highlight?: string
     <>
       {parts.map((part, i) =>
         part.toLowerCase() === highlight.trim().toLowerCase() ? (
-          <mark key={i} className="bg-primary/20 text-primary-foreground p-0.5 rounded-sm">{part}</mark>
+          <mark key={i} className="bg-yellow-300 text-black p-0.5 rounded-sm">{part}</mark>
         ) : (
           part
         )
@@ -166,3 +166,4 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
 });
 
 NoteCard.displayName = 'NoteCard';
+
