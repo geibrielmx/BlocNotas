@@ -73,14 +73,21 @@ const suggestRelatedNotesFlow = ai.defineFlow(
     outputSchema: SuggestRelatedNotesOutputSchema,
   },
   async input => {
-    const {output} = await suggestRelatedNotesPrompt(input);
-    // Asegurarse de que el output no sea null y que ideas sea un array.
-    // Si el LLM no devuelve ideas, podemos devolver un array vacío para evitar errores en el frontend.
-    if (!output || !output.ideas) {
-        return { ideas: [] };
+    try {
+      const {output} = await suggestRelatedNotesPrompt(input);
+      // Asegurarse de que el output no sea null y que ideas sea un array.
+      // Si el LLM no devuelve ideas, podemos devolver un array vacío para evitar errores en el frontend.
+      if (!output || !Array.isArray(output.ideas)) {
+          console.warn('La IA no devolvió ideas válidas o el formato es incorrecto. Se devuelve un array vacío.');
+          return { ideas: [] };
+      }
+      return output;
+    } catch (error) {
+      console.error("Error dentro de suggestRelatedNotesFlow:", error);
+      // Si hay un error en el flujo (ej. problema con la API de Genkit/Google),
+      // devolvemos un objeto que cumple el esquema pero con ideas vacías para que el frontend lo maneje.
+      // El error ya se logueó, el frontend mostrará su propio mensaje de error genérico.
+      return { ideas: [] };
     }
-    return output;
   }
 );
-
-    
