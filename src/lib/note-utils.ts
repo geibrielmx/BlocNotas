@@ -79,3 +79,16 @@ export function parseCsvRow(row: string): string[] {
   result.push(currentField); // Add the last field
   return result;
 }
+
+export function highlightTextInMarkdown(text: string, highlight?: string): string {
+  if (!highlight || !text || highlight.trim() === '') {
+    return text;
+  }
+  const searchTerm = highlight.trim();
+  if (searchTerm === '') return text;
+
+  const escapedHighlight = escapeRegExp(searchTerm);
+  const regex = new RegExp(`(${escapedHighlight})`, 'gi');
+  
+  return text.replace(regex, `<mark class="bg-yellow-300 text-black p-0.5 rounded-sm">$1</mark>`);
+}

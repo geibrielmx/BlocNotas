@@ -20,9 +20,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { formatDistanceToNow } from 'date-fns';
 import React, { useState, forwardRef } from 'react';
-import { escapeRegExp } from '@/lib/note-utils';
+import { escapeRegExp, highlightTextInMarkdown } from '@/lib/note-utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 
 interface NoteCardProps {
   note: Note;
@@ -32,7 +33,8 @@ interface NoteCardProps {
 
 function HighlightedText({ text, highlight }: { text: string; highlight?: string }) {
   if (!highlight || !text || highlight.trim() === '') {
-    return <>{text}</>;
+    // Si no hay término de búsqueda o texto, devolvemos el texto original o un fragmento vacío
+    return <>{text || ''}</>;
   }
   const escapedHighlight = escapeRegExp(highlight.trim());
   const parts = text.split(new RegExp(`(${escapedHighlight})`, 'gi'));
@@ -57,6 +59,11 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
   const displaySearchTerm = searchTerm?.trim();
   const notesPreviewLength = 180; 
 
+  const notesPreviewText = note.notesArea.substring(0, notesPreviewLength) + (note.notesArea.length > notesPreviewLength ? '...' : '');
+  const highlightedPreview = highlightTextInMarkdown(notesPreviewText, displaySearchTerm);
+  const highlightedFullNotes = highlightTextInMarkdown(note.notesArea, displaySearchTerm);
+
+
   return (
     <Card ref={ref} className="w-full shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out bg-card text-card-foreground rounded-lg border border-border/80 overflow-hidden flex flex-col">
       <CardHeader className="pb-3 pt-4 px-5 border-b border-border/60">
@@ -66,7 +73,7 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
               <HighlightedText text={note.title} highlight={displaySearchTerm} />
             </CardTitle>
             <CardDescription className="text-xs text-muted-foreground">
-              Creado {formattedDate} <span className="mx-1">&bull;</span> ID: {note.id}
+              Creado {formattedDate} <span className="mx-1">&bull;</span> ID: <HighlightedText text={note.id} highlight={displaySearchTerm} />
             </CardDescription>
           </div>
           {note.isPinned && <Pin className="h-4.5 w-4.5 text-primary flex-shrink-0 mt-0.5" />}
@@ -83,13 +90,13 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Notas:</h4>
           <div className="text-sm leading-relaxed text-foreground/90 markdown-content">
             {isExpanded ? (
-               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {note.notesArea}
+               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                {highlightedFullNotes}
               </ReactMarkdown>
             ) : (
               <>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {note.notesArea.substring(0, notesPreviewLength) + (note.notesArea.length > notesPreviewLength ? '...' : '')}
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                  {highlightedPreview}
                 </ReactMarkdown>
               </>
             )}
@@ -149,7 +156,7 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
               <AlertDialogTitle className="text-lg">¿Estás completamente seguro?</AlertDialogTitle>
               <AlertDialogDescription className="text-base">
                 Esta acción no se puede deshacer. Se eliminará permanentemente la nota titulada:
-                <strong className="block mt-1 font-medium text-foreground">"{note.title}"</strong>
+                <strong className="block mt-1 font-medium text-foreground">"<HighlightedText text={note.title} highlight={displaySearchTerm}/>"</strong>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-2">
@@ -166,4 +173,3 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
 });
 
 NoteCard.displayName = 'NoteCard';
-
