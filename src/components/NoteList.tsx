@@ -7,6 +7,7 @@ import { useNotes } from '@/contexts/NoteContext';
 import { NoteCard } from './NoteCard';
 import { NotebookPen, SearchX, Inbox } from 'lucide-react';
 import { Button } from './ui/button';
+import React, { useEffect, useRef } from 'react';
 
 interface NoteListProps {
   onEditNote: (note: Note) => void;
@@ -14,6 +15,7 @@ interface NoteListProps {
 
 export function NoteList({ onEditNote }: NoteListProps) {
   const { notes, searchTerm, setSearchTerm } = useNotes();
+  const firstMatchRef = useRef<HTMLDivElement>(null);
 
   const filteredNotes = notes
     .filter(note => {
@@ -33,6 +35,15 @@ export function NoteList({ onEditNote }: NoteListProps) {
       if (!a.isPinned && b.isPinned) return 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
+
+  useEffect(() => {
+    if (searchTerm.trim() && filteredNotes.length > 0 && firstMatchRef.current) {
+      // Timeout to ensure DOM is updated before scrolling
+      setTimeout(() => {
+        firstMatchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+  }, [filteredNotes, searchTerm]);
 
   if (notes.length === 0) {
     return (
@@ -63,8 +74,14 @@ export function NoteList({ onEditNote }: NoteListProps) {
 
   return (
     <div className="space-y-5 pb-4">
-      {filteredNotes.map(note => (
-          <NoteCard key={note.id} note={note} onEdit={() => onEditNote(note)} searchTerm={searchTerm.trim()} />
+      {filteredNotes.map((note, index) => (
+          <NoteCard 
+            key={note.id} 
+            note={note} 
+            onEdit={() => onEditNote(note)} 
+            searchTerm={searchTerm.trim()}
+            ref={index === 0 && searchTerm.trim() ? firstMatchRef : null}
+        />
       ))}
     </div>
   );

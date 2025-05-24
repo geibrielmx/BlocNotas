@@ -19,7 +19,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { formatDistanceToNow } from 'date-fns';
-import { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { escapeRegExp } from '@/lib/note-utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -49,8 +49,7 @@ function HighlightedText({ text, highlight }: { text: string; highlight?: string
   );
 }
 
-
-export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
+export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdit, searchTerm }, ref) => {
   const { deleteNote, togglePinNote, setSelectedNoteIdForAI } = useNotes();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -59,7 +58,7 @@ export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
   const notesPreviewLength = 180; 
 
   return (
-    <Card className="w-full shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out bg-card text-card-foreground rounded-lg border border-border/80 overflow-hidden flex flex-col">
+    <Card ref={ref} className="w-full shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out bg-card text-card-foreground rounded-lg border border-border/80 overflow-hidden flex flex-col">
       <CardHeader className="pb-3 pt-4 px-5 border-b border-border/60">
         <div className="flex justify-between items-start gap-3">
           <div className="flex-1 min-w-0">
@@ -164,4 +163,6 @@ export function NoteCard({ note, onEdit, searchTerm }: NoteCardProps) {
       </CardFooter>
     </Card>
   );
-}
+});
+
+NoteCard.displayName = 'NoteCard';

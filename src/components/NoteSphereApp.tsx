@@ -9,7 +9,7 @@ import { NoteList } from './NoteList';
 import { AiSuggestions } from './AiSuggestions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, PlusCircle, Search, Sparkles, Upload, Eraser } from 'lucide-react';
+import { Download, PlusCircle, Search, Sparkles, Upload, Eraser, Save } from 'lucide-react';
 import { convertNotesToCsv, downloadTextFile } from '@/lib/note-utils';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -29,7 +29,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-const APP_VERSION = "v1.2.0"; 
+const APP_VERSION = "v1.3.0"; 
 
 export function NoteSphereApp() {
   const { notes, searchTerm, setSearchTerm, importNotes, clearAllNotes } = useNotes();
@@ -64,10 +64,25 @@ export function NoteSphereApp() {
     try {
       const csvData = convertNotesToCsv(notes);
       downloadTextFile('notesphere_pro_export.txt', csvData);
-      toast({ title: "Exportación Exitosa", description: "Tus notas han sido exportadas." });
+      toast({ title: "Exportación Exitosa", description: "Tus notas han sido exportadas como notesphere_pro_export.txt." });
     } catch (error) {
       console.error("Exportación fallida:", error);
       toast({ title: "Exportación Fallida", description: "No se pudieron exportar las notas.", variant: "destructive" });
+    }
+  };
+  
+  const handleSaveChanges = () => {
+    if (notes.length === 0) {
+      toast({ title: "Sin Cambios para Guardar", description: "No hay notas para guardar y exportar.", variant: "default" });
+      return;
+    }
+    try {
+      const csvData = convertNotesToCsv(notes);
+      downloadTextFile('notesphere_pro_export.txt', csvData);
+      toast({ title: "Cambios Guardados y Exportados", description: "El estado actual de tus notas ha sido exportado a notesphere_pro_export.txt." });
+    } catch (error) {
+      console.error("Error al guardar y exportar:", error);
+      toast({ title: "Error al Guardar", description: "No se pudieron guardar y exportar las notas.", variant: "destructive" });
     }
   };
 
@@ -108,7 +123,10 @@ export function NoteSphereApp() {
         <div className="container mx-auto flex items-center justify-between gap-x-4 md:gap-x-6">
           <div className="flex items-center gap-2.5 shrink-0">
             <svg role="img" aria-label="Logo Bloc de Notas Pro" className="h-8 w-8 md:h-9 md:w-9 text-primary" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <path d="M16.8284 5.17157C18.0937 6.43683 18.75 8.13109 18.75 9.9C18.75 11.6689 18.0937 13.3632 16.8284 14.6284C15.5632 15.8937 13.8689 16.55 12.1 16.55H9.9C8.13109 16.55 6.43683 15.8937 5.17157 14.6284C3.90632 13.3632 3.25 11.6689 3.25 9.9C3.25 8.13109 3.90632 6.43683 5.17157 5.17157C6.43683 3.90632 8.13109 3.25 9.9 3.25H12.1C13.8689 3.25 15.5632 3.90632 16.8284 5.17157ZM15 5.75C14.1778 5.75 13.3733 5.99195 12.6944 6.44628L6.44628 12.6944C5.99195 13.3733 5.75 14.1778 5.75 15C5.75 16.933 7.31701 18.5 9.25 18.5H14.75C16.683 18.5 18.25 16.933 18.25 15V9.25C18.25 7.31701 16.683 5.75 14.75 5.75H15Z M20.75 9.9C20.75 10.7869 20.5801 11.6611 20.2534 12.474L12.474 20.2534C11.6611 20.5801 10.7869 20.75 9.9 20.75C7.66621 20.75 5.64045 19.8694 4.15921 18.3882C2.67797 16.9069 1.79739 14.8812 1.79739 12.6474C1.79739 12.1099 1.87002 11.5801 1.99995 11.0716L3.49805 3.49805C3.88778 2.01453 5.25978 1 6.85261 1H17.1474C18.7402 1 20.1122 2.01453 20.5019 3.49805L20.7363 4.35258C20.7441 4.38281 20.75 4.41396 20.75 4.44531V9.9Z"/>
+              <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM4 12C4 7.58172 7.58172 4 12 4C16.4183 4 20 7.58172 20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12Z" opacity="0.3"/>
+              <path d="M8 9C8 8.44772 8.44772 8 9 8H15C15.5523 8 16 8.44772 16 9V15C16 15.5523 15.5523 16 15 16H9C8.44772 16 8 15.5523 8 15V9Z"/>
+              <path d="M10 10H14V11H10V10Z"/>
+              <path d="M10 13H14V14H10V13Z"/>
             </svg>
             <h1 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">Bloc de Notas Pro</h1>
           </div>
@@ -142,6 +160,10 @@ export function NoteSphereApp() {
             <Button onClick={handleImportButtonClick} variant="outline" size="default" className="shadow-sm">
               <Upload className="mr-1.5 h-4.5 w-4.5" />
               <span className="hidden sm:inline">Importar</span>
+            </Button>
+             <Button onClick={handleSaveChanges} variant="outline" size="default" className="shadow-sm">
+              <Save className="mr-1.5 h-4.5 w-4.5" />
+              <span className="hidden sm:inline">Guardar</span>
             </Button>
             <Button onClick={handleExportNotes} variant="outline" size="default" className="shadow-sm">
               <Download className="mr-1.5 h-4.5 w-4.5" />
@@ -202,7 +224,7 @@ export function NoteSphereApp() {
 
       <footer className="py-4 px-5 border-t border-border/80 bg-card text-center">
         <p className="text-xs text-muted-foreground">
-          © GaboGmx {currentYear ?? new Date().getFullYear()} <span className="mx-1">&bull;</span> NoteSphere Pro {APP_VERSION}
+          © GaboGmx {currentYear ?? new Date().getFullYear()} <span className="mx-1">&bull;</span> Bloc de Notas Pro {APP_VERSION}
         </p>
       </footer>
 
@@ -302,3 +324,4 @@ export function NoteSphereApp() {
     </div>
   );
 }
+
