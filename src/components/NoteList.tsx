@@ -23,11 +23,12 @@ export function NoteList({ onEditNote }: NoteListProps) {
       if (!trimmedSearchTerm) {
         return true; 
       }
+      // Orden de búsqueda: Area de Notas, luego Objetivo, luego Título, y finalmente ID.
       return (
-        note.id.toLowerCase().includes(trimmedSearchTerm) ||
-        note.title.toLowerCase().includes(trimmedSearchTerm) ||
+        note.notesArea.toLowerCase().includes(trimmedSearchTerm) ||
         note.objective.toLowerCase().includes(trimmedSearchTerm) ||
-        note.notesArea.toLowerCase().includes(trimmedSearchTerm)
+        note.title.toLowerCase().includes(trimmedSearchTerm) ||
+        note.id.toLowerCase().includes(trimmedSearchTerm)
       );
     })
     .sort((a, b) => {
@@ -86,3 +87,4 @@ export function NoteList({ onEditNote }: NoteListProps) {
     </div>
   );
 }
+
