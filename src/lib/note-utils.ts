@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 
 export function generateNoteId(existingNotes: Note[]): string {
   const todayStr = format(new Date(), 'yyMMdd');
-  const notesFromToday = existingNotes.filter(note => note.id.startsWith(todayStr));
+  const notesFromToday = existingNotes.filter(note => note.id.startsWith(todayStr) && note.id.length === 8 && /^\d+$/.test(note.id.substring(6)));
 
   let maxSeq = 0;
   notesFromToday.forEach(note => {
@@ -18,10 +18,12 @@ export function generateNoteId(existingNotes: Note[]): string {
 }
 
 function escapeCsvField(field: string): string {
-  if (field.includes(',') || field.includes('"') || field.includes('\n')) {
-    return `"${field.replace(/"/g, '""')}"`;
+  // Ensure field is a string before processing
+  const stringField = String(field ?? ''); 
+  if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n') || stringField.includes('\r')) {
+    return `"${stringField.replace(/"/g, '""')}"`;
   }
-  return field;
+  return stringField;
 }
 
 export function convertNotesToCsv(notes: Note[]): string {
@@ -49,7 +51,31 @@ export function downloadTextFile(filename: string, content: string): void {
   document.body.removeChild(element);
 }
 
-// Helper function to escape special characters for use in a regular expression
 export function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
+}
+
+export function parseCsvRow(row: string): string[] {
+  const result: string[] = [];
+  let currentField = '';
+  let inQuotes = false;
+  for (let i = 0; i < row.length; i++) {
+    const char = row[i];
+    if (char === '"') {
+      if (inQuotes && i + 1 < row.length && row[i + 1] === '"') {
+        // Escaped quote "”"
+        currentField += '"';
+        i++; // Skip next quote
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      result.push(currentField);
+      currentField = '';
+    } else {
+      currentField += char;
+    }
+  }
+  result.push(currentField); // Add the last field
+  return result;
 }

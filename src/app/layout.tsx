@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'NoteSphere',
-  description: 'Organize your thoughts with NoteSphere',
+  title: 'NoteSphere Pro',
+  description: 'Organize your thoughts with NoteSphere Pro',
 };
 
 export default function RootLayout({
