@@ -94,17 +94,71 @@ export function NoteProvider({ children }: { children: ReactNode }) {
     return notes.find(note => note.id === id);
   }, [notes]);
 
-  const importNotes = useCallback((csvString: string) => {
-    if (!csvString || csvString.trim() === '') {
+  const importNotes = useCallback((csvStringInput: string) => {
+    const csvString = csvStringInput.trim(); // Trim leading/trailing whitespace from the whole string
+
+    if (!csvString) {
       toast({ title: "Importación Vacía", description: "El archivo seleccionado está vacío o no contiene texto.", variant: "default" });
       return;
     }
 
     try {
-      const lines = csvString.trim().split(/\r?\n/);
+      // New robust row splitting logic
+      const actualRows: string[] = [];
+      let currentRecordBuffer = '';
+      let inQuotesContext = false;
+
+      for (let i = 0; i < csvString.length; i++) {
+        const char = csvString[i];
+        
+        if (char === '"') {
+          // Check if this is an escaped quote ("")
+          if (inQuotesContext && i + 1 < csvString.length && csvString[i+1] === '"') {
+            currentRecordBuffer += char; // Add the first quote
+            currentRecordBuffer += csvString[++i]; // Add the second quote and advance index
+            continue; 
+          }
+          inQuotesContext = !inQuotesContext; // Toggle quote state
+        }
+        
+        currentRecordBuffer += char;
+
+        // Check for newline (CR, LF, CRLF) only if not in quotes
+        if (!inQuotesContext) {
+          let isNewline = false;
+          if (char === '\n') { // LF
+            isNewline = true;
+          } else if (char === '\r') { // CR
+            isNewline = true;
+            if (i + 1 < csvString.length && csvString[i+1] === '\n') { // CRLF
+              currentRecordBuffer += csvString[++i]; // Consume LF
+            }
+          }
+
+          if (isNewline) {
+            // Push the accumulated record buffer, trim only the newline character(s) that caused the split
+            // The record itself might have leading/trailing spaces which are valid
+            let recordToPush = currentRecordBuffer;
+            if (recordToPush.endsWith('\r\n')) recordToPush = recordToPush.slice(0, -2);
+            else if (recordToPush.endsWith('\n')) recordToPush = recordToPush.slice(0, -1);
+            else if (recordToPush.endsWith('\r')) recordToPush = recordToPush.slice(0, -1);
+            
+            if (recordToPush.trim().length > 0) { // Avoid pushing effectively empty lines if they were just newlines
+                 actualRows.push(recordToPush);
+            }
+            currentRecordBuffer = ''; // Reset for next record
+          }
+        }
+      }
+      // Add any remaining buffer as the last line (if file doesn't end with newline)
+      if (currentRecordBuffer.trim().length > 0) {
+        actualRows.push(currentRecordBuffer);
+      }
       
+      const lines = actualRows.filter(line => line.trim().length > 0); // Final filter for any truly empty lines
+
       if (lines.length === 0) {
-        toast({ title: "Archivo Vacío", description: "El archivo no contiene líneas de datos.", variant: "default" });
+        toast({ title: "Archivo Vacío o Sin Contenido Válido", description: "El archivo no contiene líneas de datos o solo espacios en blanco.", variant: "default" });
         return;
       }
   
@@ -144,15 +198,18 @@ export function NoteProvider({ children }: { children: ReactNode }) {
   
       for (let i = 0; i < dataRows.length; i++) {
         const rowString = dataRows[i];
-        if (rowString.trim() === '') continue; 
+        if (rowString.trim() === '') {
+            skippedRowCount++;
+            continue; 
+        }
 
         const fields = parseCsvRow(rowString);
   
         if (fields.length !== expectedHeaders.length) {
-          console.warn(`Fila ${i + 2}: Se omitió fila por número incorrecto de campos. Esperados: ${expectedHeaders.length}, Encontrados: ${fields.length}. Contenido: "${rowString}"`);
+          console.warn(`Fila ${i + 2} (datos): Se omitió fila por número incorrecto de campos. Esperados: ${expectedHeaders.length}, Encontrados: ${fields.length}. Contenido: "${rowString}"`);
           toast({ 
             title: "Advertencia de Importación", 
-            description: `Se omitió la fila ${i + 2} del archivo. Esto puede ocurrir si el formato es incorrecto o si una nota contiene saltos de línea internos en sus campos, lo cual no es soportado por este importador simple.`, 
+            description: `Se omitió la fila de datos ${i + 1} (línea ${i + 2} del archivo). Número de campos incorrecto. Esto puede ocurrir si hay comas o comillas sin escapar dentro de un campo, o si la estructura de la fila está dañada.`, 
             variant: "default",
             duration: 9000
           });
@@ -160,7 +217,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
           continue;
         }
         
-        const [id, title, objective, notesArea, createdAt, isPinnedStr] = fields.map(f => f.trim());
+        const [id, title, objective, notesArea, createdAt, isPinnedStr] = fields; // No trim here, parseCsvRow should handle quoted spaces
         
         const importedNote: Note = {
           id: id,
@@ -168,14 +225,14 @@ export function NoteProvider({ children }: { children: ReactNode }) {
           objective: objective,
           notesArea: notesArea,
           createdAt: createdAt,
-          isPinned: isPinnedStr.toLowerCase() === 'true',
+          isPinned: isPinnedStr ? isPinnedStr.toLowerCase() === 'true' : false,
         };
   
         if (isNaN(new Date(importedNote.createdAt).getTime())) {
-          console.warn(`Fila ${i + 2}: Se omitió nota con fecha inválida: "${importedNote.createdAt}". Título: "${importedNote.title}"`);
+          console.warn(`Fila ${i + 2} (datos): Se omitió nota con fecha inválida: "${importedNote.createdAt}". Título: "${importedNote.title}"`);
           toast({ 
             title: "Advertencia de Importación", 
-            description: `Se omitió la nota "${importedNote.title || importedNote.id}" (fila ${i + 2}) debido a una fecha de creación inválida.`, 
+            description: `Se omitió la nota "${importedNote.title || importedNote.id}" (fila de datos ${i + 1}) debido a una fecha de creación inválida.`, 
             variant: "default",
             duration: 7000
           });
@@ -185,8 +242,8 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         notesFromImportProcessing.push(importedNote);
       }
 
-      if (notesFromImportProcessing.length === 0 && skippedRowCount > 0) {
-        toast({ title: "Importación Fallida", description: `No se pudieron importar notas válidas. Se omitieron ${skippedRowCount} filas debido a errores de formato. Revisa el archivo CSV, especialmente por saltos de línea dentro de los campos de texto.`, variant: "destructive", duration: 12000 });
+      if (notesFromImportProcessing.length === 0 && skippedRowCount > 0 && dataRows.length > 0) {
+        toast({ title: "Importación Fallida", description: `No se pudieron importar notas válidas. Se omitieron ${skippedRowCount} filas de datos debido a errores de formato. Revisa el archivo CSV y la consola para más detalles.`, variant: "destructive", duration: 12000 });
         return;
       }
       if (notesFromImportProcessing.length === 0 && skippedRowCount === 0 && dataRows.length > 0) {
@@ -216,13 +273,13 @@ export function NoteProvider({ children }: { children: ReactNode }) {
   
       let summaryMessage = `${importedCount} notas importadas, ${updatedCount} notas actualizadas.`;
       if (skippedRowCount > 0) {
-        summaryMessage += ` ${skippedRowCount} filas fueron omitidas (posiblemente por saltos de línea internos en campos de texto o formato incorrecto).`;
+        summaryMessage += ` ${skippedRowCount} filas de datos fueron omitidas debido a problemas de formato o estructura.`;
       }
-      toast({ title: "Importación Completada", description: summaryMessage, duration: 9000 });
+      toast({ title: "Importación Completada", description: summaryMessage, duration: 10000 });
   
     } catch (error) {
-      console.error("Error al importar notas:", error);
-      toast({ title: "Error Crítico de Importación", description: "Ocurrió un error inesperado al procesar el archivo. Revisa la consola para más detalles.", variant: "destructive" });
+      console.error("Error crítico durante la importación de notas:", error);
+      toast({ title: "Error Crítico de Importación", description: "Ocurrió un error inesperado al procesar el archivo. Revisa la consola para más detalles.", variant: "destructive", duration: 10000 });
     }
   }, [setNotes, toast]); 
 
