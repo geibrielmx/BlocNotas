@@ -69,18 +69,19 @@ Contenido de la Nota:
    5.  **CRUCIAL PARA EL CASO 1**: Tu salida para este caso DEBE ser un objeto JSON con una clave "ideas", que es un array de objetos (entre 2 y 5 objetos). Cada objeto idea DEBE tener las claves "title" (string) y "details" (string). El campo "type" es opcional. NO devuelvas texto plano. NO devuelvas un array de "ideas" vacío si el término del título es algo sobre lo que se puede generar información (como "kubectl", "NEM", etc.).
 
 **CASO 2: La nota es más elaborada y contiene detalles.**
-   Si el 'Contenido de la Nota' es más extenso, con información en "Objetivo" y/o "Notas", y no es solo un término breve en el título:
-   1.  Analiza el contenido completo de la nota.
-   2.  Proporciona una lista de ideas relacionadas que expandan, mejoren o complementen la nota existente.
-   3.  Cada idea debe tener un 'title' (título) claro y 'details' (detalles) elaborados.
-   4.  Si es aplicable, los 'details' pueden incluir:
+   Si el 'Contenido de la Nota' es más extenso, con información significativa en "Objetivo" y/o "Notas", y no es solo un término breve en el título:
+   1.  Analiza el contenido completo de la nota (incluyendo título, objetivo y el área de notas).
+   2.  **PRIORIDAD PARA CASO 2:** TU MISIÓN ES GENERAR IDEAS ÚTILES. **NO RESPONDAS** con un array de "ideas" vacío ni con frases que indiquen que no hay nada que sugerir si la nota tiene contenido en "Objetivo" o "Notas".
+   3.  Proporciona una lista de 2 a 5 ideas relacionadas que expandan, mejoren o complementen la nota existente. Si el contenido es muy específico, intenta ofrecer al menos 1-2 ideas concretas.
+   4.  Cada idea debe tener un 'title' (título) claro y 'details' (detalles) elaborados.
+   5.  Si es aplicable, los 'details' pueden incluir:
        *   Fragmentos de código (usa Markdown).
        *   Ejemplos de líneas de comando.
        *   Explicaciones o consejos de sintaxis.
        *   Puntos de lluvia de ideas para exploración adicional.
        *   Posibles expansiones del tema de la nota.
        *   Sugerencias para mejorar la claridad o el contenido de la nota.
-   5.  Genera entre 2 y 5 ideas.
+       *   Conceptos relacionados o tecnologías alternativas.
 
 **PARA TODAS LAS RESPUESTAS (AMBOS CASOS):**
 *   Excepto cuando se indique lo contrario en el CASO 1, estructura tu salida rigurosamente de acuerdo con el esquema JSON proporcionado: un objeto con una clave "ideas" que es un array de objetos. Cada objeto dentro del array debe tener las claves "title" (string) y "details" (string), y opcionalmente "type" (string).
@@ -104,10 +105,17 @@ const suggestRelatedNotesFlow = ai.defineFlow(
           console.warn('La IA no devolvió ideas válidas o el formato es incorrecto. Se devuelve un array vacío. Output recibido:', JSON.stringify(output, null, 2));
           return { ideas: [] };
       }
-      // Si la IA devuelve un array de ideas vacío explícitamente, y el input era probablemente una consulta (ej. solo título),
-      // esto podría indicar un fallo del prompt en el CASO 1.
-      if (output.ideas.length === 0 && input.noteContent.includes("Objetivo: \nNotas: ")) {
-        console.warn('La IA devolvió un array de ideas vacío para lo que parece ser una consulta directa (CASO 1). Input:', input.noteContent);
+      // Si la IA devuelve un array de ideas vacío explícitamente:
+      if (output.ideas.length === 0) {
+        const isLikelyDirectQuery = input.noteContent.trim().endsWith("Objetivo: \nNotas:"); // Heurística simple
+        const titleOnlyPattern = /^Título: [^\n]+\nObjetivo:(\s*)\nNotas:(\s*)$/; // Más específico para Título solo
+        const isTitleOnlyQuery = titleOnlyPattern.test(input.noteContent.trim());
+
+        if (isTitleOnlyQuery || (isLikelyDirectQuery && input.noteContent.split('\n').length <= 3) ) {
+          console.warn('La IA devolvió un array de ideas vacío para lo que parece ser una consulta directa (CASO 1). Input:', input.noteContent, 'Output:', JSON.stringify(output, null, 2));
+        } else {
+          console.warn('La IA devolvió un array de ideas vacío para una nota elaborada (CASO 2). Input:', input.noteContent, 'Output:', JSON.stringify(output, null, 2));
+        }
       }
       return output;
     } catch (error) {
