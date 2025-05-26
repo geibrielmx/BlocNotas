@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 
-const APP_VERSION = "v1.5.0";
+const APP_VERSION = "v1.6.0";
 type ViewMode = 'cards' | 'table';
 
 export function NoteSphereApp() {
@@ -320,3 +320,4 @@ export function NoteSphereApp() {
     </div>
   );
 }
+
