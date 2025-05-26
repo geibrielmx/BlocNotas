@@ -6,11 +6,12 @@ import type { Note } from '@/types';
 import { useNotes } from '@/contexts/NoteContext';
 import { NoteForm } from './NoteForm';
 import { NoteList } from './NoteList';
+import { NoteTable } from './NoteTable'; 
 import { AiSuggestions } from './AiSuggestions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, PlusCircle, Search, Sparkles, Upload, Eraser, Save, BookOpenText } from 'lucide-react';
-import { convertNotesToCsv, downloadTextFile } from '@/lib/note-utils';
+import { Download, PlusCircle, Search, Sparkles, Upload, Eraser, Save, List as ListIcon, TableIcon } from 'lucide-react';
+import { convertNotesToJson, downloadTextFile } from '@/lib/note-utils';
 import { useToast } from "@/hooks/use-toast";
 import {
   Sheet,
@@ -29,13 +30,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-const APP_VERSION = "v1.4.1"; 
+const APP_VERSION = "v1.5.0"; 
+type ViewMode = 'cards' | 'table';
 
 export function NoteSphereApp() {
   const { notes, searchTerm, setSearchTerm, importNotes, clearAllNotes } = useNotes();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [noteToEdit, setNoteToEdit] = useState<Note | null>(null);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -62,9 +65,9 @@ export function NoteSphereApp() {
       return;
     }
     try {
-      const csvData = convertNotesToCsv(notes);
-      downloadTextFile('notesphere_pro_export.txt', csvData);
-      toast({ title: "Exportación Exitosa", description: "Tus notas han sido exportadas como notesphere_pro_export.txt." });
+      const jsonData = convertNotesToJson(notes);
+      downloadTextFile('notesphere_pro_export.json', jsonData, 'application/json');
+      toast({ title: "Exportación Exitosa", description: "Tus notas han sido exportadas como notesphere_pro_export.json." });
     } catch (error) {
       console.error("Exportación fallida:", error);
       toast({ title: "Exportación Fallida", description: "No se pudieron exportar las notas.", variant: "destructive" });
@@ -77,9 +80,9 @@ export function NoteSphereApp() {
       return;
     }
     try {
-      const csvData = convertNotesToCsv(notes);
-      downloadTextFile('notesphere_pro_export.txt', csvData);
-      toast({ title: "Cambios Guardados y Exportados", description: "El estado actual de tus notas ha sido exportado a notesphere_pro_export.txt." });
+      const jsonData = convertNotesToJson(notes);
+      downloadTextFile('notesphere_pro_export.json', jsonData, 'application/json');
+      toast({ title: "Cambios Guardados y Exportados", description: "El estado actual de tus notas ha sido exportado a notesphere_pro_export.json." });
     } catch (error) {
       console.error("Error al guardar y exportar:", error);
       toast({ title: "Error al Guardar", description: "No se pudieron guardar y exportar las notas.", variant: "destructive" });
@@ -93,6 +96,11 @@ export function NoteSphereApp() {
   const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.type !== 'application/json') {
+        toast({ title: "Archivo Inválido", description: "Por favor, selecciona un archivo .json.", variant: "destructive"});
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
@@ -107,7 +115,7 @@ export function NoteSphereApp() {
       };
       reader.readAsText(file);
       if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+        fileInputRef.current.value = ""; // Reset file input
       }
     }
   };
@@ -121,29 +129,60 @@ export function NoteSphereApp() {
     <div className="flex flex-col h-screen bg-background text-foreground">
       <header className="p-4 md:p-5 border-b border-border/80 bg-card shadow-sm sticky top-0 z-10">
         <div className="container mx-auto flex flex-col gap-y-3 md:gap-y-4">
-          {/* Fila 1: Logo y Título */}
-          <div className="flex items-center justify-start gap-2.5">
-            <BookOpenText className="h-7 w-7 md:h-8 md:w-8 text-primary" />
-            <h1 className="text-xl md:text-2xl font-semibold text-foreground tracking-tight">Bloc de Notas Pro</h1>
+          {/* Fila 1: Logo, Título y Selector de Vista */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center justify-start gap-2.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 md:h-8 md:w-8">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                <line x1="12" y1="8" x2="12" y2="16" />
+                <line x1="8" y1="12" x2="16" y2="12" />
+              </svg>
+              <h1 className="text-xl md:text-2xl font-semibold text-foreground tracking-tight">Bloc de Notas Pro</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant={viewMode === 'cards' ? 'secondary' : 'outline'} 
+                size="sm" 
+                onClick={() => setViewMode('cards')} 
+                title="Vista de Tarjetas"
+                className="h-9"
+              >
+                <ListIcon className="h-4 w-4 md:mr-1.5"/> <span className="hidden md:inline">Tarjetas</span>
+              </Button>
+              <Button 
+                variant={viewMode === 'table' ? 'secondary' : 'outline'} 
+                size="sm" 
+                onClick={() => setViewMode('table')} 
+                title="Vista de Tabla"
+                className="h-9"
+              >
+                <TableIcon className="h-4 w-4 md:mr-1.5"/> <span className="hidden md:inline">Tabla</span>
+              </Button>
+            </div>
           </div>
 
-          {/* Fila 2: Búsqueda y Botones */}
+          {/* Fila 2: Búsqueda (para CardView) y Botones de Acción */}
           <div className="flex flex-col gap-y-3 sm:flex-row sm:items-center sm:justify-between sm:gap-x-4">
-            <div className="flex-1 min-w-0"> {/* Contenedor de búsqueda con min-w-0 */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Buscar notas..."
-                  className="pl-10 pr-3 w-full bg-input border-border focus:ring-primary rounded-lg shadow-sm h-9 md:h-10 text-sm"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                />
+            {viewMode === 'cards' && (
+              <div className="flex-1 min-w-0"> 
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Buscar en tarjetas..."
+                    className="pl-10 pr-3 w-full bg-input border-border focus:ring-primary rounded-lg shadow-sm h-9 text-sm"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
+            )}
+            {viewMode === 'table' && <div className="flex-1 min-w-0"></div> /* Placeholder to keep layout consistent */}
+
 
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-start sm:justify-end">
-              <Button onClick={handleAddNewNote} variant="default" size="sm" className="shadow-sm">
+              <Button onClick={handleAddNewNote} variant="default" size="sm" className="shadow-sm h-9">
                 <PlusCircle className="h-4 w-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Añadir Nota</span>
               </Button>
@@ -151,24 +190,24 @@ export function NoteSphereApp() {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileSelected}
-                accept=".txt,.csv"
+                accept="application/json" 
                 className="hidden"
               />
-              <Button onClick={handleImportButtonClick} variant="outline" size="sm" className="shadow-sm">
+              <Button onClick={handleImportButtonClick} variant="outline" size="sm" className="shadow-sm h-9">
                 <Upload className="h-4 w-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Importar</span>
               </Button>
-              <Button onClick={handleSaveChanges} variant="outline" size="sm" className="shadow-sm">
+              <Button onClick={handleSaveChanges} variant="outline" size="sm" className="shadow-sm h-9">
                 <Save className="h-4 w-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Guardar</span>
               </Button>
-              <Button onClick={handleExportNotes} variant="outline" size="sm" className="shadow-sm">
+              <Button onClick={handleExportNotes} variant="outline" size="sm" className="shadow-sm h-9">
                 <Download className="h-4 w-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Exportar</span>
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" className="shadow-sm">
+                  <Button variant="destructive" size="sm" className="shadow-sm h-9">
                     <Eraser className="h-4 w-4 sm:mr-1.5" />
                     <span className="hidden sm:inline">Limpiar Todo</span>
                   </Button>
@@ -212,7 +251,11 @@ export function NoteSphereApp() {
 
       <main className="flex-1 flex overflow-hidden container mx-auto py-6 md:py-8 gap-6 md:gap-8">
         <div className="flex-1 overflow-y-auto pr-2 scroll-smooth rounded-lg custom-scrollbar">
-          <NoteList onEditNote={handleEditNote} />
+          {viewMode === 'cards' ? (
+            <NoteList onEditNote={handleEditNote} />
+          ) : (
+            <NoteTable onEditNote={handleEditNote} />
+          )}
         </div>
         <aside className="hidden md:block w-[360px] lg:w-[400px] transition-all duration-300 ease-in-out overflow-y-auto rounded-lg custom-scrollbar opacity-100 translate-x-0">
            <AiSuggestions />
@@ -264,9 +307,9 @@ export function NoteSphereApp() {
           background-color: hsl(var(--secondary));
           font-weight: 600;
         }
-        .markdown-content tr:nth-child(even) {
-          background-color: hsl(var(--background));
-        }
+        /* .markdown-content tr:nth-child(even) {
+          background-color: hsl(var(--background)); // Removed to avoid conflict with table hover
+        } */
         .markdown-content tr:hover {
           background-color: hsl(var(--accent));
         }
@@ -284,22 +327,22 @@ export function NoteSphereApp() {
         .markdown-content code {
           background-color: hsl(var(--muted));
           padding: 0.2em 0.4em;
-          border-radius: 3px; /* más sutil */
+          border-radius: 3px; 
           font-family: var(--font-geist-mono);
-          font-size: 0.9em; /* ligeramente más pequeño */
+          font-size: 0.9em; 
         }
         .markdown-content pre {
           background-color: hsl(var(--muted));
-          padding: 0.8em 1em; /* ajuste de padding */
-          border-radius: var(--radius-md);
+          padding: 0.8em 1em; 
+          border-radius: var(--radius); 
           overflow-x: auto;
-          border: 1px solid hsl(var(--border)); /* borde sutil */
+          border: 1px solid hsl(var(--border)); 
         }
         .markdown-content pre code {
           background-color: transparent;
           padding: 0;
-          font-size: 0.875em; /* ajuste de tamaño para bloques */
-          border: none; /* sin borde para el código dentro de pre */
+          font-size: 0.875em; 
+          border: none; 
         }
         .markdown-content blockquote {
           border-left: 4px solid hsl(var(--border));
@@ -321,6 +364,10 @@ export function NoteSphereApp() {
         .markdown-content h2 { font-size: 1.5em; }
         .markdown-content h3 { font-size: 1.25em; }
 
+        /* Specific styles for NoteTable hover to avoid conflict with markdown table hover */
+        .note-table-row:hover {
+          background-color: hsl(var(--muted) / 0.5) !important; /* More specific */
+        }
       `}</style>
     </div>
   );

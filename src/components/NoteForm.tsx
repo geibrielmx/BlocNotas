@@ -2,7 +2,7 @@
 "use client";
 
 import type { Note } from '@/types';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -26,13 +26,17 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useNotes } from '@/contexts/NoteContext';
-import { useEffect, useRef } from 'react';
-import { FilePenLine, Edit, Bold, Italic, List, ListOrdered, Code, SquareCode, LinkIcon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { FilePenLine, Edit, Bold, Italic, List, ListOrdered, Code, SquareCode, LinkIcon, ImagePlus, X } from 'lucide-react';
+import NextImage from 'next/image'; // Aliased to avoid conflict
+import { useToast } from '@/hooks/use-toast';
 
+// Zod schema updated to include optional images array of strings (Data URIs)
 const noteSchema = z.object({
   title: z.string().min(1, 'El título es obligatorio').max(100, 'El título debe tener 100 caracteres o menos'),
   objective: z.string().min(1, 'El objetivo es obligatorio').max(200, 'El objetivo debe tener 200 caracteres o menos'),
   notesArea: z.string().min(1, 'El área de notas no puede estar vacía'),
+  images: z.array(z.string()).optional(), // Assuming data URIs are strings. URL validation might be too strict for data URIs directly.
 });
 
 type NoteFormData = z.infer<typeof noteSchema>;
@@ -46,6 +50,8 @@ interface NoteFormProps {
 export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   const { addNote, updateNote } = useNotes();
   const notesAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]); // State to hold Data URIs for previews
+  const { toast } = useToast();
   
   const form = useForm<NoteFormData>({
     resolver: zodResolver(noteSchema),
@@ -53,38 +59,51 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
       title: '',
       objective: '',
       notesArea: '',
+      images: [],
     },
   });
 
   useEffect(() => {
-    if (isOpen) { 
+    if (isOpen) {
       if (noteToEdit) {
         form.reset({
           title: noteToEdit.title,
           objective: noteToEdit.objective,
           notesArea: noteToEdit.notesArea,
+          images: noteToEdit.images || [], // Use existing images
         });
+        setImagePreviews(noteToEdit.images || []); // Set previews for existing images
       } else {
-        form.reset({
+        form.reset({ // Reset for new note
           title: '',
           objective: '',
           notesArea: '',
+          images: [],
         });
+        setImagePreviews([]);
       }
     }
-  }, [noteToEdit, form, isOpen]); 
+  }, [noteToEdit, form, isOpen]);
 
   const onSubmit = (data: NoteFormData) => {
+    // Use imagePreviews for saving, as it's the source of truth for displayed/managed images
+    const noteDataWithImages = {
+      ...data,
+      images: imagePreviews,
+    };
     if (noteToEdit) {
-      updateNote({ ...noteToEdit, ...data });
+      updateNote({ ...noteToEdit, ...noteDataWithImages });
     } else {
-      addNote(data);
+      addNote(noteDataWithImages);
     }
-    onOpenChange(false);
+    onOpenChange(false); // Close dialog
   };
 
   const handleOpenChange = (open: boolean) => {
     onOpenChange(open);
+    if (!open) { // Reset previews when dialog closes
+      setImagePreviews([]);
+    }
   };
 
   const applyMarkdownFormatting = (syntaxStart: string, syntaxEnd: string = '', placeholderText: string = 'texto') => {
@@ -150,12 +169,10 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
       const textBeforeCursorLine = currentText.substring(0, lineStartIndex);
       let textAfterCursorLine = currentText.substring(lineStartIndex);
 
-      // Add prefix, ensuring not to double-prefix if the line already looks like a list item
       const currentLineContent = textAfterCursorLine.split('\n')[0];
       if (currentLineContent.trimStart().startsWith('- ') || currentLineContent.trimStart().match(/^\d+\.\s/)) {
-         // If already a list item, just move cursor or insert newline + prefix if at end of item
         newTextValue = `${textBeforeCursorLine}${currentLineContent}\n${prefix}${textAfterCursorLine.substring(currentLineContent.length)}`;
-        finalCursorPosition = start + prefix.length + 1; // after the newline and prefix
+        finalCursorPosition = start + prefix.length + 1; 
       } else {
         newTextValue = `${textBeforeCursorLine}${prefix}${textAfterCursorLine}`;
         finalCursorPosition = lineStartIndex + prefix.length + (start - lineStartIndex);
@@ -169,13 +186,53 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
     }, 0);
   };
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const currentImageCount = imagePreviews.length;
+      if (currentImageCount + files.length > 5) {
+        toast({
+          title: "Límite de Imágenes Alcanzado",
+          description: "Puedes subir un máximo de 5 imágenes por nota.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      Array.from(files).forEach(file => {
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit per image
+           toast({
+            title: "Imagen Demasiado Grande",
+            description: `La imagen "${file.name}" supera el límite de 2MB y no será añadida.`,
+            variant: "destructive",
+          });
+          return; // Skip this file
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (reader.result) {
+            setImagePreviews(prev => [...prev, reader.result as string]);
+            // No need to call form.setValue here if onSubmit uses imagePreviews
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+      // Reset file input to allow selecting the same file again if removed
+      event.target.value = ""; 
+    }
+  };
+
+  const removeImage = (indexToRemove: number) => {
+    setImagePreviews(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
 
   const markdownToolbar = (
     <div className="flex flex-wrap gap-1 mb-2 p-1 border border-border rounded-md bg-background shadow-sm">
       <Button type="button" variant="outline" size="sm" className="px-2 h-8" onClick={() => applyMarkdownFormatting('**', '**', 'negrita')} title="Negrita (Ctrl+B)">
         <Bold className="h-4 w-4" />
       </Button>
-      <Button type="button" variant="outline" size="sm" className="px-2 h-8" onClick={() => applyMarkdownFormatting('*', '*', 'cursiva')} title="Cursiva (Ctrl+I)">
+       <Button type="button" variant="outline" size="sm" className="px-2 h-8" onClick={() => applyMarkdownFormatting('*', '*', 'cursiva')} title="Cursiva (Ctrl+I)">
         <Italic className="h-4 w-4" />
       </Button>
       <Button type="button" variant="outline" size="sm" className="px-2 h-8" onClick={() => applyListFormatting('- ')} title="Lista no ordenada">
@@ -198,7 +255,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[600px] bg-card text-card-foreground shadow-xl rounded-lg border border-border/90">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col bg-card text-card-foreground shadow-xl rounded-lg border border-border/90">
         <DialogHeader className="pb-3 pt-2 px-1">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             {noteToEdit ? <Edit className="h-5 w-5 text-primary" /> : <FilePenLine className="h-5 w-5 text-primary" />}
@@ -208,8 +265,9 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
             {noteToEdit ? 'Modifica los detalles de tu nota existente.' : 'Completa los detalles para crear una nueva nota.'}
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-1">
+        <Form {...form}> {/* Pass form methods to FormProvider */}
+          {/* handleSubmit is called on the button, not the form directly here because DialogFooter is outside form structure needed for scroll */}
+          <div className="space-y-4 px-1 flex-1 overflow-y-auto pr-2 custom-scrollbar pb-4">
             <FormField
               control={form.control}
               name="title"
@@ -245,10 +303,10 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                   {markdownToolbar}
                   <FormControl>
                     <Textarea
-                      {...field} // RHF field props, including its ref
+                      {...field} 
                       ref={(e) => {
-                        field.ref(e); // Call RHF's ref function
-                        notesAreaRef.current = e; // Assign to your manual ref
+                        field.ref(e); 
+                        notesAreaRef.current = e; 
                       }}
                       placeholder="Anota tus ideas, detalles, fragmentos de código y cualquier información relevante... Puedes usar Markdown para formatear, ¡incluyendo tablas!"
                       rows={8}
@@ -259,17 +317,55 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                 </FormItem>
               )}
             />
-            <DialogFooter className="pt-4 gap-2 sm:gap-0">
-              <DialogClose asChild>
-                <Button type="button" variant="outline" size="default">
-                  Cancelar
-                </Button>
-              </DialogClose>
-              <Button type="submit" variant="default" size="default">
-                {noteToEdit ? 'Guardar Cambios' : 'Crear Nota'}
+            <FormItem>
+              <FormLabel className="text-sm font-medium text-foreground/90">Imágenes (máx. 5, 2MB c/u)</FormLabel>
+              <FormControl>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    id="imageUpload"
+                    multiple
+                    accept="image/png, image/jpeg, image/gif, image/webp"
+                    onChange={handleImageUpload}
+                    className="hidden" // Visually hidden, triggered by button
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('imageUpload')?.click()}>
+                    <ImagePlus className="h-4 w-4 mr-2" />
+                    Añadir Imágenes
+                  </Button>
+                </div>
+              </FormControl>
+              {imagePreviews.length > 0 && (
+                <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {imagePreviews.map((src, index) => (
+                    <div key={index} className="relative group aspect-square border rounded-md overflow-hidden shadow-sm bg-muted/30">
+                      <NextImage src={src} alt={`Previsualización ${index + 1}`} layout="fill" objectFit="contain" />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity p-0"
+                        onClick={() => removeImage(index)}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+               <FormMessage>{/* form.formState.errors.images?.message - RHF doesn't directly manage imagePreviews state */}</FormMessage>
+            </FormItem>
+          </div>
+          <DialogFooter className="pt-4 gap-2 sm:gap-0 mt-auto sticky bottom-0 bg-card py-3 border-t px-6">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" size="default">
+                Cancelar
               </Button>
-            </DialogFooter>
-          </form>
+            </DialogClose>
+            <Button type="button" variant="default" size="default" onClick={form.handleSubmit(onSubmit)}>
+              {noteToEdit ? 'Guardar Cambios' : 'Crear Nota'}
+            </Button>
+          </DialogFooter>
         </Form>
       </DialogContent>
     </Dialog>

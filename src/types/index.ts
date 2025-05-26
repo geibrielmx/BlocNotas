@@ -5,4 +5,5 @@ export interface Note {
   notesArea: string;
   createdAt: string; // ISO string date
   isPinned: boolean;
+  images?: string[]; // Array of image Data URIs
 }

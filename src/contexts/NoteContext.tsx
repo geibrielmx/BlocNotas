@@ -4,7 +4,7 @@
 import type { Note } from '@/types';
 import { createContext, useContext, useState, type ReactNode, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { generateNoteId, parseCsvRow } from '@/lib/note-utils';
+import { generateNoteId } from '@/lib/note-utils';
 import { useToast } from "@/hooks/use-toast";
 
 interface NoteContextType {
@@ -16,11 +16,13 @@ interface NoteContextType {
   addNote: (noteData: Omit<Note, 'id' | 'createdAt' | 'isPinned'>) => void;
   updateNote: (updatedNote: Note) => void;
   deleteNote: (id: string) => void;
+  deleteMultipleNotes: (ids: string[]) => void;
   togglePinNote: (id: string) => void;
+  togglePinMultipleNotes: (ids: string[], pin: boolean) => void;
   getNoteById: (id: string) => Note | undefined;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
-  importNotes: (csvString: string) => void;
+  importNotes: (jsonString: string) => void;
   clearAllNotes: () => void;
 }
 
@@ -29,35 +31,35 @@ const NoteContext = createContext<NoteContextType | undefined>(undefined);
 const initialNotes: Note[] = [];
 
 export function NoteProvider({ children }: { children: ReactNode }) {
-  const [notes, setNotes] = useLocalStorage<Note[]>('notesphere-notes', initialNotes);
+  const [notes, setNotes] = useLocalStorage<Note[]>('notesphere-notes-json', initialNotes); // Changed key for JSON storage
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNoteIdForAI, setSelectedNoteIdForAI] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const addNote = useCallback((noteData: Omit<Note, 'id' | 'createdAt' | 'isPinned'>) => {
+  const sortNotes = (notesToSort: Note[]): Note[] => {
+    return notesToSort.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  };
+
+  const addNote = useCallback((noteData: Omit<Note, 'id' | 'createdAt' | 'isPinned' | 'images'> & { images?: string[] }) => {
     const newNote: Note = {
       ...noteData,
       id: generateNoteId(notes),
       createdAt: new Date().toISOString(),
       isPinned: false,
+      images: noteData.images || [],
     };
-    setNotes(prevNotes => [newNote, ...prevNotes].sort((a, b) => {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }));
+    setNotes(prevNotes => sortNotes([newNote, ...prevNotes]));
     toast({ title: "Nota Creada", description: `La nota "${newNote.title}" se ha creado correctamente.` });
   }, [notes, setNotes, toast]);
 
   const updateNote = useCallback((updatedNote: Note) => {
     setNotes(prevNotes =>
-      prevNotes.map(note => (note.id === updatedNote.id ? updatedNote : note))
-      .sort((a, b) => {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      })
+      sortNotes(prevNotes.map(note => (note.id === updatedNote.id ? updatedNote : note)))
     );
     toast({ title: "Nota Actualizada", description: `La nota "${updatedNote.title}" se ha actualizado correctamente.` });
   }, [setNotes, toast]);
@@ -73,215 +75,124 @@ export function NoteProvider({ children }: { children: ReactNode }) {
     }
   }, [notes, setNotes, toast, selectedNoteIdForAI, setSelectedNoteIdForAI]);
 
+  const deleteMultipleNotes = useCallback((ids: string[]) => {
+    setNotes(prevNotes => prevNotes.filter(note => !ids.includes(note.id)));
+    if (ids.includes(selectedNoteIdForAI || "")) {
+        setSelectedNoteIdForAI(null);
+    }
+    toast({ title: `${ids.length} Notas Eliminadas`, description: `Se han eliminado ${ids.length} notas.`, variant: "destructive" });
+  }, [setNotes, toast, selectedNoteIdForAI, setSelectedNoteIdForAI]);
+
+
   const togglePinNote = useCallback((id: string) => {
     const noteToToggle = notes.find(n => n.id === id);
     setNotes(prevNotes =>
-      prevNotes.map(note =>
-        note.id === id ? { ...note, isPinned: !note.isPinned } : note
+      sortNotes(
+        prevNotes.map(note =>
+          note.id === id ? { ...note, isPinned: !note.isPinned } : note
+        )
       )
-      .sort((a, b) => {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      })
     );
     if (noteToToggle) {
       toast({ title: noteToToggle.isPinned ? "Nota Desfijada" : "Nota Fijada", description: `La nota "${noteToToggle.title}" ha sido ${noteToToggle.isPinned ? "desfijada" : "fijada"}.` });
     }
   }, [notes, setNotes, toast]);
 
+  const togglePinMultipleNotes = useCallback((ids: string[], pin: boolean) => {
+    setNotes(prevNotes =>
+      sortNotes(
+        prevNotes.map(note =>
+          ids.includes(note.id) ? { ...note, isPinned: pin } : note
+        )
+      )
+    );
+    toast({ title: `Notas ${pin ? "Fijadas" : "Desfijadas"}`, description: `${ids.length} notas han sido ${pin ? "fijadas" : "desfijadas"}.` });
+  }, [setNotes, toast]);
+
   const getNoteById = useCallback((id: string) => {
     return notes.find(note => note.id === id);
   }, [notes]);
 
-  const importNotes = useCallback((csvStringInput: string) => {
-    const csvString = csvStringInput.trim(); // Trim leading/trailing whitespace from the whole string
-
-    if (!csvString) {
-      toast({ title: "Importación Vacía", description: "El archivo seleccionado está vacío o no contiene texto.", variant: "default" });
+  const importNotes = useCallback((jsonString: string) => {
+    if (!jsonString.trim()) {
+      toast({ title: "Importación Vacía", description: "El archivo seleccionado está vacío o no contiene texto JSON.", variant: "default" });
       return;
     }
 
     try {
-      // New robust row splitting logic
-      const actualRows: string[] = [];
-      let currentRecordBuffer = '';
-      let inQuotesContext = false;
+      const parsedNotes = JSON.parse(jsonString);
 
-      for (let i = 0; i < csvString.length; i++) {
-        const char = csvString[i];
-        
-        if (char === '"') {
-          // Check if this is an escaped quote ("")
-          if (inQuotesContext && i + 1 < csvString.length && csvString[i+1] === '"') {
-            currentRecordBuffer += char; // Add the first quote
-            currentRecordBuffer += csvString[++i]; // Add the second quote and advance index
-            continue; 
-          }
-          inQuotesContext = !inQuotesContext; // Toggle quote state
-        }
-        
-        currentRecordBuffer += char;
-
-        // Check for newline (CR, LF, CRLF) only if not in quotes
-        if (!inQuotesContext) {
-          let isNewline = false;
-          if (char === '\n') { // LF
-            isNewline = true;
-          } else if (char === '\r') { // CR
-            isNewline = true;
-            if (i + 1 < csvString.length && csvString[i+1] === '\n') { // CRLF
-              currentRecordBuffer += csvString[++i]; // Consume LF
-            }
-          }
-
-          if (isNewline) {
-            // Push the accumulated record buffer, trim only the newline character(s) that caused the split
-            // The record itself might have leading/trailing spaces which are valid
-            let recordToPush = currentRecordBuffer;
-            if (recordToPush.endsWith('\r\n')) recordToPush = recordToPush.slice(0, -2);
-            else if (recordToPush.endsWith('\n')) recordToPush = recordToPush.slice(0, -1);
-            else if (recordToPush.endsWith('\r')) recordToPush = recordToPush.slice(0, -1);
-            
-            if (recordToPush.trim().length > 0) { // Avoid pushing effectively empty lines if they were just newlines
-                 actualRows.push(recordToPush);
-            }
-            currentRecordBuffer = ''; // Reset for next record
-          }
-        }
-      }
-      // Add any remaining buffer as the last line (if file doesn't end with newline)
-      if (currentRecordBuffer.trim().length > 0) {
-        actualRows.push(currentRecordBuffer);
-      }
-      
-      const lines = actualRows.filter(line => line.trim().length > 0); // Final filter for any truly empty lines
-
-      if (lines.length === 0) {
-        toast({ title: "Archivo Vacío o Sin Contenido Válido", description: "El archivo no contiene líneas de datos o solo espacios en blanco.", variant: "default" });
-        return;
-      }
-  
-      const expectedHeaders = ['ID', 'Title', 'Objective', 'NotesArea', 'CreatedAt', 'IsPinned'];
-      const parsedHeader = parseCsvRow(lines[0]);
-      
-      let headerMismatch = parsedHeader.length !== expectedHeaders.length;
-      if (!headerMismatch) {
-        for (let i = 0; i < expectedHeaders.length; i++) {
-          if (parsedHeader[i].trim() !== expectedHeaders[i]) {
-            headerMismatch = true;
-            break;
-          }
-        }
-      }
-  
-      if (headerMismatch) {
-        toast({ 
-          title: "Error de Formato en Cabeceras", 
-          description: `Las cabeceras del archivo no coinciden. Esperadas: "${expectedHeaders.join(',')}". Encontradas: "${parsedHeader.join(',')}". Asegúrate de que la primera línea contenga las cabeceras correctas, que el archivo use comas como delimitadores y que no haya saltos de línea inesperados antes de las cabeceras.`, 
-          variant: "destructive",
-          duration: 12000 
-        });
-        return;
-      }
-      
-      if (lines.length < 2) {
-        toast({ title: "Sin Datos para Importar", description: "El archivo solo contiene cabeceras. No hay notas para importar.", variant: "default" });
+      if (!Array.isArray(parsedNotes)) {
+        toast({ title: "Error de Formato", description: "El archivo no contiene un array de notas JSON válido.", variant: "destructive" });
         return;
       }
 
-      const dataRows = lines.slice(1);
       let importedCount = 0;
       let updatedCount = 0;
-      let skippedRowCount = 0;
-      const notesFromImportProcessing: Note[] = []; 
-  
-      for (let i = 0; i < dataRows.length; i++) {
-        const rowString = dataRows[i];
-        if (rowString.trim() === '') {
-            skippedRowCount++;
-            continue; 
-        }
+      let skippedCount = 0;
+      const notesFromImportProcessing: Note[] = [];
 
-        const fields = parseCsvRow(rowString);
-  
-        if (fields.length !== expectedHeaders.length) {
-          console.warn(`Fila ${i + 2} (datos): Se omitió fila por número incorrecto de campos. Esperados: ${expectedHeaders.length}, Encontrados: ${fields.length}. Contenido: "${rowString}"`);
-          toast({ 
-            title: "Advertencia de Importación", 
-            description: `Se omitió la fila de datos ${i + 1} (línea ${i + 2} del archivo). Número de campos incorrecto. Esto puede ocurrir si hay comas o comillas sin escapar dentro de un campo, o si la estructura de la fila está dañada.`, 
-            variant: "default",
-            duration: 9000
-          });
-          skippedRowCount++;
-          continue;
+      for (const importedObj of parsedNotes) {
+        // Basic validation for a Note object
+        if (
+          typeof importedObj.id === 'string' &&
+          typeof importedObj.title === 'string' &&
+          typeof importedObj.objective === 'string' &&
+          typeof importedObj.notesArea === 'string' &&
+          typeof importedObj.createdAt === 'string' &&
+          typeof importedObj.isPinned === 'boolean' &&
+          (importedObj.images === undefined || (Array.isArray(importedObj.images) && importedObj.images.every((img: any) => typeof img === 'string'))) && // Validate images array
+          !isNaN(new Date(importedObj.createdAt).getTime())
+        ) {
+          const noteToAdd: Note = {
+            id: importedObj.id,
+            title: importedObj.title,
+            objective: importedObj.objective,
+            notesArea: importedObj.notesArea,
+            createdAt: importedObj.createdAt,
+            isPinned: importedObj.isPinned,
+            images: importedObj.images || [], // Ensure images is an array
+          };
+          notesFromImportProcessing.push(noteToAdd);
+        } else {
+          skippedCount++;
+          console.warn("Objeto omitido durante la importación JSON por formato inválido o fecha incorrecta:", importedObj);
         }
-        
-        const [id, title, objective, notesArea, createdAt, isPinnedStr] = fields; // No trim here, parseCsvRow should handle quoted spaces
-        
-        const importedNote: Note = {
-          id: id,
-          title: title,
-          objective: objective,
-          notesArea: notesArea,
-          createdAt: createdAt,
-          isPinned: isPinnedStr ? isPinnedStr.toLowerCase() === 'true' : false,
-        };
-  
-        if (isNaN(new Date(importedNote.createdAt).getTime())) {
-          console.warn(`Fila ${i + 2} (datos): Se omitió nota con fecha inválida: "${importedNote.createdAt}". Título: "${importedNote.title}"`);
-          toast({ 
-            title: "Advertencia de Importación", 
-            description: `Se omitió la nota "${importedNote.title || importedNote.id}" (fila de datos ${i + 1}) debido a una fecha de creación inválida.`, 
-            variant: "default",
-            duration: 7000
-          });
-          skippedRowCount++;
-          continue;
-        }
-        notesFromImportProcessing.push(importedNote);
       }
 
-      if (notesFromImportProcessing.length === 0 && skippedRowCount > 0 && dataRows.length > 0) {
-        toast({ title: "Importación Fallida", description: `No se pudieron importar notas válidas. Se omitieron ${skippedRowCount} filas de datos debido a errores de formato. Revisa el archivo CSV y la consola para más detalles.`, variant: "destructive", duration: 12000 });
+      if (notesFromImportProcessing.length === 0 && skippedCount > 0) {
+        toast({ title: "Importación Fallida", description: `No se pudieron importar notas válidas. Se omitieron ${skippedCount} objetos debido a errores de formato. Revisa el archivo JSON y la consola.`, variant: "destructive", duration: 12000 });
         return;
       }
-      if (notesFromImportProcessing.length === 0 && skippedRowCount === 0 && dataRows.length > 0) {
-        toast({ title: "Sin Notas Válidas", description: "No se encontraron notas válidas para importar en el archivo después de las cabeceras.", variant: "default" });
+      if (notesFromImportProcessing.length === 0 && parsedNotes.length > 0) { // Check if parsedNotes had items
+        toast({ title: "Sin Notas Válidas", description: "No se encontraron notas válidas para importar en el archivo JSON.", variant: "default" });
         return;
       }
-
-
+      
       setNotes(prevNotes => {
-        let currentNotesMap = new Map(prevNotes.map(note => [note.id, note]));
-
+        const currentNotesMap = new Map(prevNotes.map(note => [note.id, note]));
         notesFromImportProcessing.forEach(importedNote => {
-            if (currentNotesMap.has(importedNote.id)) {
-                updatedCount++;
-            } else {
-                importedCount++;
-            }
-            currentNotesMap.set(importedNote.id, importedNote);
+          if (currentNotesMap.has(importedNote.id)) {
+            updatedCount++;
+          } else {
+            importedCount++;
+          }
+          currentNotesMap.set(importedNote.id, importedNote);
         });
-        
-        return Array.from(currentNotesMap.values()).sort((a, b) => {
-          if (a.isPinned && !b.isPinned) return -1;
-          if (!a.isPinned && b.isPinned) return 1;
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        });
+        return sortNotes(Array.from(currentNotesMap.values()));
       });
-  
+
       let summaryMessage = `${importedCount} notas importadas, ${updatedCount} notas actualizadas.`;
-      if (skippedRowCount > 0) {
-        summaryMessage += ` ${skippedRowCount} filas de datos fueron omitidas debido a problemas de formato o estructura.`;
+      if (skippedCount > 0) {
+        summaryMessage += ` ${skippedCount} objetos fueron omitidos por formato inválido.`;
       }
       toast({ title: "Importación Completada", description: summaryMessage, duration: 10000 });
-  
+
     } catch (error) {
-      console.error("Error crítico durante la importación de notas:", error);
-      toast({ title: "Error Crítico de Importación", description: "Ocurrió un error inesperado al procesar el archivo. Revisa la consola para más detalles.", variant: "destructive", duration: 10000 });
+      console.error("Error crítico durante la importación de notas JSON:", error);
+      toast({ title: "Error Crítico de Importación", description: "Ocurrió un error al procesar el archivo JSON. Asegúrate de que el formato sea correcto.", variant: "destructive", duration: 10000 });
     }
-  }, [setNotes, toast]); 
+  }, [setNotes, toast]);
 
   const clearAllNotes = useCallback(() => {
     setNotes([]);
@@ -289,7 +200,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
     toast({
       title: "Todas las Notas Eliminadas",
       description: "Tu Bloc de Notas ahora está vacío.",
-      variant: "destructive", 
+      variant: "destructive",
     });
   }, [setNotes, toast, setSelectedNoteIdForAI]);
 
@@ -304,7 +215,9 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         addNote,
         updateNote,
         deleteNote,
+        deleteMultipleNotes,
         togglePinNote,
+        togglePinMultipleNotes,
         getNoteById,
         isLoading,
         setIsLoading,
@@ -324,4 +237,3 @@ export function useNotes() {
   }
   return context;
 }
-
