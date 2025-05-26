@@ -16,7 +16,6 @@ import {
   DialogFooter,
   DialogClose,
   DialogDescription,
-  // DialogTrigger, // No longer needed here for dynamic triggers
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -27,7 +26,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useNotes } from '@/contexts/NoteContext';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { FilePenLine, Edit, Bold, Italic, List, ListOrdered, Code, SquareCode, LinkIcon, ImagePlus, X, ZoomIn } from 'lucide-react';
 import NextImage from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -103,7 +102,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   const handleOpenChange = (open: boolean) => {
     onOpenChange(open);
     if (!open) {
-      setImagePreviews([]);
+      setImagePreviews([]); // Clear previews when dialog closes
     }
   };
 
@@ -154,15 +153,16 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
       const lines = selectedText.split('\n');
       const formattedLines = lines.map(line => {
           const trimmedLine = line.trimStart();
-          if (trimmedLine.startsWith('- ') || trimmedLine.match(/^\d+\.\s/)) {
-              return line;
+          if (trimmedLine.startsWith('- ') || trimmedLine.match(/^\d+\.\s/)) { // Avoid double-prefixing
+              return line; 
           }
           return `${prefix}${line}`;
       }).join('\n');
-
+      
       newTextValue = `${currentText.substring(0, start)}${formattedLines}${currentText.substring(end)}`;
       finalCursorPosition = start + formattedLines.length;
     } else {
+      // Apply to current line or insert new line if current is prefixed
       let lineStartIndex = start;
       while(lineStartIndex > 0 && currentText[lineStartIndex -1] !== '\n') {
         lineStartIndex--;
@@ -172,9 +172,11 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
 
       const currentLineContent = textAfterCursorLine.split('\n')[0];
       if (currentLineContent.trimStart().startsWith('- ') || currentLineContent.trimStart().match(/^\d+\.\s/)) {
+        // Current line is already a list item, add a new one below it
         newTextValue = `${textBeforeCursorLine}${currentLineContent}\n${prefix}${textAfterCursorLine.substring(currentLineContent.length)}`;
-        finalCursorPosition = start + prefix.length + 1;
+        finalCursorPosition = start + prefix.length + 1; // +1 for the newline
       } else {
+        // Prefix current line
         newTextValue = `${textBeforeCursorLine}${prefix}${textAfterCursorLine}`;
         finalCursorPosition = lineStartIndex + prefix.length + (start - lineStartIndex);
       }
@@ -187,39 +189,92 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
     }, 0);
   };
 
+  const processFiles = useCallback((files: File[]) => {
+    const currentImageCount = imagePreviews.length;
+    if (currentImageCount + files.length > 5) {
+      toast({
+        title: "Límite de Imágenes Alcanzado",
+        description: `Puedes subir un máximo de 5 imágenes por nota. Intentaste añadir ${files.length} imagen(es). Límite actual: ${currentImageCount}/5.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    let imagesProcessedInBatch = 0;
+    files.forEach(file => {
+      if (imagePreviews.length + imagesProcessedInBatch >= 5) {
+         if (files.length > (5 - currentImageCount) ) { // Only show if some files were skipped due to overall limit
+            toast({
+                title: "Algunas Imágenes Omitidas",
+                description: `Se alcanzó el límite de 5 imágenes. No todas las imágenes seleccionadas/pegadas pudieron ser añadidas.`,
+                variant: "default"
+            });
+         }
+         return; // Stop processing if overall limit is reached
+      }
+
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+         toast({
+          title: "Imagen Demasiado Grande",
+          description: `La imagen "${file.name}" (${(file.size / 1024 / 1024).toFixed(2)}MB) supera el límite de 2MB y no será añadida.`,
+          variant: "destructive",
+        });
+        return; // Skip this file
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result) {
+          setImagePreviews(prev => [...prev, reader.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+      imagesProcessedInBatch++;
+    });
+  }, [imagePreviews, setImagePreviews, toast]);
+
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      const currentImageCount = imagePreviews.length;
-      if (currentImageCount + files.length > 5) {
-        toast({
-          title: "Límite de Imágenes Alcanzado",
-          description: "Puedes subir un máximo de 5 imágenes por nota.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      Array.from(files).forEach(file => {
-        if (file.size > 2 * 1024 * 1024) {
-           toast({
-            title: "Imagen Demasiado Grande",
-            description: `La imagen "${file.name}" supera el límite de 2MB y no será añadida.`,
-            variant: "destructive",
-          });
-          return;
-        }
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (reader.result) {
-            setImagePreviews(prev => [...prev, reader.result as string]);
-          }
-        };
-        reader.readAsDataURL(file);
-      });
-      event.target.value = "";
+      processFiles(Array.from(files));
+      event.target.value = ""; // Clear the input after processing
     }
   };
+
+  useEffect(() => {
+    const currentTextarea = notesAreaRef.current;
+    const handlePaste = (event: ClipboardEvent) => {
+      if (!isOpen) return;
+
+      const items = event.clipboardData?.items;
+      if (items) {
+        const filesArray: File[] = [];
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.startsWith('image/')) {
+            const file = items[i].getAsFile();
+            if (file) {
+              filesArray.push(file);
+            }
+          }
+        }
+        if (filesArray.length > 0) {
+          event.preventDefault(); // Prevent default paste action if images are handled
+          processFiles(filesArray);
+        }
+      }
+    };
+
+    if (currentTextarea && isOpen) {
+      currentTextarea.addEventListener('paste', handlePaste as EventListener);
+    }
+
+    return () => {
+      if (currentTextarea) {
+        currentTextarea.removeEventListener('paste', handlePaste as EventListener);
+      }
+    };
+  }, [isOpen, processFiles, notesAreaRef]);
+
 
   const removeImage = (indexToRemove: number) => {
     setImagePreviews(prev => prev.filter((_, index) => index !== indexToRemove));
@@ -279,7 +334,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-            <div className="space-y-4 px-6 flex-1 overflow-y-auto custom-scrollbar pb-4">
+            <div className="px-6 flex-1 overflow-y-auto custom-scrollbar space-y-4 pb-4"> {/* Ensure padding is here for scroll content */}
               <FormField
                 control={form.control}
                 name="title"
@@ -320,7 +375,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                           field.ref(e);
                           notesAreaRef.current = e;
                         }}
-                        placeholder="Anota tus ideas, detalles, fragmentos de código y cualquier información relevante... Puedes usar Markdown para formatear, ¡incluyendo tablas!"
+                        placeholder="Anota tus ideas, detalles, fragmentos de código y cualquier información relevante... Puedes usar Markdown para formatear, ¡incluyendo tablas! También puedes pegar imágenes directamente aquí."
                         rows={8}
                         className="bg-input border-border focus:border-primary min-h-[150px] text-sm leading-relaxed"
                       />
@@ -350,12 +405,11 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                 {imagePreviews.length > 0 && (
                   <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     {imagePreviews.map((src, index) => (
-                      // Removed DialogTrigger here
                       <div
                         key={index}
                         className="relative group aspect-square border rounded-md overflow-hidden shadow-sm bg-muted/30 cursor-pointer"
                         title="Haz clic para ver imagen completa / Botón X para eliminar"
-                        onClick={() => openImagePreviewModal(src)} // Programmatically open dialog
+                        onClick={() => openImagePreviewModal(src)} 
                       >
                         <NextImage
                           src={src}
@@ -384,7 +438,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                  <FormMessage>{/* RHF doesn't directly manage imagePreviews state */}</FormMessage>
               </FormItem>
             </div>
-            <DialogFooter className="bg-card py-3 border-t px-6 pt-4 gap-2 sm:gap-0">
+            <DialogFooter className="bg-card border-t px-6 py-4 gap-2 sm:gap-0"> {/* Standard padding */}
               <DialogClose asChild>
                 <Button type="button" variant="outline" size="default">
                   Cancelar
@@ -398,7 +452,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
         </Form>
       </DialogContent>
     </Dialog>
-    {/* Single Dialog instance for image preview in form, controlled by state */}
+    
     <Dialog open={isFormPreviewModalOpen} onOpenChange={setIsFormPreviewModalOpen}>
         <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl p-2 h-auto max-h-[90vh]">
           {formPreviewImageSrc && (

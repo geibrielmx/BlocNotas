@@ -9,7 +9,7 @@ import { NoteList } from './NoteList';
 import { NoteTable } from './NoteTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, PlusCircle, Search, Upload, Eraser, List as ListIcon, TableIcon, Maximize2 } from 'lucide-react';
+import { Download, PlusCircle, Search, Upload, Eraser, List as ListIcon, TableIcon, Maximize2, BookOpenText } from 'lucide-react';
 import { convertNotesToJson, downloadTextFile } from '@/lib/note-utils';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -27,8 +27,8 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle as ModalTitle, // Renamed to avoid conflict
-  DialogDescription as ModalDescription, // Renamed to avoid conflict
+  DialogTitle as ModalTitle, 
+  DialogDescription as ModalDescription, 
   DialogClose,
 } from '@/components/ui/dialog';
 import ReactMarkdown from 'react-markdown';
@@ -141,7 +141,7 @@ export function NoteSphereApp() {
           {/* Fila 1: Logo, Título y Selector de Vista */}
           <div className="flex items-center justify-between">
             <div className="flex items-center justify-start gap-2.5">
-            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open-text"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/><path d="M6 8h2"/><path d="M6 12h2"/><path d="M16 8h2"/><path d="M16 12h2"/></svg>
+              <BookOpenText className="h-7 w-7 text-primary" strokeWidth={1.75} />
               <h1 className="text-xl md:text-2xl font-semibold text-foreground tracking-tight">Bloc de Notas Pro</h1>
             </div>
             <div className="flex items-center gap-2">
@@ -265,7 +265,7 @@ export function NoteSphereApp() {
                 <span className="font-semibold">Objetivo:</span> {noteInFocus.objective}
               </ModalDescription>
             </DialogHeader>
-            <ScrollArea className="flex-1 custom-scrollbar">
+            <ScrollArea className="flex-1 min-h-0 custom-scrollbar"> {/* Added min-h-0 here for scroll fix */}
               <div className="p-6 space-y-6">
                 {noteInFocus.images && noteInFocus.images.length > 0 && (
                   <div className="space-y-2">
