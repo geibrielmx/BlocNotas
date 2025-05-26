@@ -255,8 +255,8 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col bg-card text-card-foreground shadow-xl rounded-lg border border-border/90">
-        <DialogHeader className="pb-3 pt-2 px-1">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col bg-card text-card-foreground shadow-xl rounded-lg border border-border/90 p-0">
+        <DialogHeader className="pb-3 pt-5 px-6">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             {noteToEdit ? <Edit className="h-5 w-5 text-primary" /> : <FilePenLine className="h-5 w-5 text-primary" />}
             {noteToEdit ? 'Editar Nota' : 'Crear Nueva Nota'}
@@ -266,105 +266,107 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <div className="space-y-4 px-1 flex-1 overflow-y-auto pr-2 custom-scrollbar pb-20"> {/* Aumentado padding inferior */}
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground/90">Título</FormLabel>
-                  <FormControl>
-                    <Input placeholder="ej., Ideas Campaña Marketing Q3" {...field} className="bg-input border-border focus:border-primary h-10 text-sm"/>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="objective"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground/90">Objetivo / Función</FormLabel>
-                  <FormControl>
-                    <Input placeholder="ej., Lluvia de ideas sobre estrategias y entregables clave" {...field} className="bg-input border-border focus:border-primary h-10 text-sm"/>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="notesArea"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground/90">Área de Notas</FormLabel>
-                  {markdownToolbar}
-                  <FormControl>
-                    <Textarea
-                      {...field} 
-                      ref={(e) => {
-                        field.ref(e); 
-                        notesAreaRef.current = e; 
-                      }}
-                      placeholder="Anota tus ideas, detalles, fragmentos de código y cualquier información relevante... Puedes usar Markdown para formatear, ¡incluyendo tablas!"
-                      rows={8}
-                      className="bg-input border-border focus:border-primary min-h-[150px] text-sm leading-relaxed"
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+            <div className="space-y-4 px-6 flex-1 overflow-y-auto custom-scrollbar pb-4"> {/* Contenido desplazable */}
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-foreground/90">Título</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ej., Ideas Campaña Marketing Q3" {...field} className="bg-input border-border focus:border-primary h-10 text-sm"/>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="objective"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-foreground/90">Objetivo / Función</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ej., Lluvia de ideas sobre estrategias y entregables clave" {...field} className="bg-input border-border focus:border-primary h-10 text-sm"/>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="notesArea"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-foreground/90">Área de Notas</FormLabel>
+                    {markdownToolbar}
+                    <FormControl>
+                      <Textarea
+                        {...field} 
+                        ref={(e) => {
+                          field.ref(e); 
+                          notesAreaRef.current = e; 
+                        }}
+                        placeholder="Anota tus ideas, detalles, fragmentos de código y cualquier información relevante... Puedes usar Markdown para formatear, ¡incluyendo tablas!"
+                        rows={8}
+                        className="bg-input border-border focus:border-primary min-h-[150px] text-sm leading-relaxed"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-foreground/90">Imágenes (máx. 5, 2MB c/u)</FormLabel>
+                <FormControl>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      id="imageUpload"
+                      multiple
+                      accept="image/png, image/jpeg, image/gif, image/webp"
+                      onChange={handleImageUpload}
+                      className="hidden" // Visually hidden, triggered by button
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormItem>
-              <FormLabel className="text-sm font-medium text-foreground/90">Imágenes (máx. 5, 2MB c/u)</FormLabel>
-              <FormControl>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="file"
-                    id="imageUpload"
-                    multiple
-                    accept="image/png, image/jpeg, image/gif, image/webp"
-                    onChange={handleImageUpload}
-                    className="hidden" // Visually hidden, triggered by button
-                  />
-                  <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('imageUpload')?.click()}>
-                    <ImagePlus className="h-4 w-4 mr-2" />
-                    Añadir Imágenes
-                  </Button>
-                </div>
-              </FormControl>
-              {imagePreviews.length > 0 && (
-                <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {imagePreviews.map((src, index) => (
-                    <div key={index} className="relative group aspect-square border rounded-md overflow-hidden shadow-sm bg-muted/30">
-                      <NextImage src={src} alt={`Previsualización ${index + 1}`} layout="fill" objectFit="contain" />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity p-0"
-                        onClick={() => removeImage(index)}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-               <FormMessage>{/* form.formState.errors.images?.message - RHF doesn't directly manage imagePreviews state */}</FormMessage>
-            </FormItem>
-          </div>
-          <DialogFooter className="pt-4 gap-2 sm:gap-0 mt-auto sticky bottom-0 bg-card py-3 border-t px-6">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" size="default">
-                Cancelar
+                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('imageUpload')?.click()}>
+                      <ImagePlus className="h-4 w-4 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Añadir Imágenes</span>
+                    </Button>
+                  </div>
+                </FormControl>
+                {imagePreviews.length > 0 && (
+                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {imagePreviews.map((src, index) => (
+                      <div key={index} className="relative group aspect-square border rounded-md overflow-hidden shadow-sm bg-muted/30">
+                        <NextImage src={src} alt={`Previsualización ${index + 1}`} layout="fill" objectFit="contain" />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity p-0"
+                          onClick={() => removeImage(index)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                 <FormMessage>{/* form.formState.errors.images?.message - RHF doesn't directly manage imagePreviews state */}</FormMessage>
+              </FormItem>
+            </div>
+            <DialogFooter className="pt-4 gap-2 sm:gap-0 bg-card py-3 border-t px-6"> {/* Pie de página normal */}
+              <DialogClose asChild>
+                <Button type="button" variant="outline" size="default">
+                  Cancelar
+                </Button>
+              </DialogClose>
+              <Button type="submit" variant="default" size="default">
+                {noteToEdit ? 'Guardar Cambios' : 'Crear Nota'}
               </Button>
-            </DialogClose>
-            <Button type="button" variant="default" size="default" onClick={form.handleSubmit(onSubmit)}>
-              {noteToEdit ? 'Guardar Cambios' : 'Crear Nota'}
-            </Button>
-          </DialogFooter>
+            </DialogFooter>
+          </form>
         </Form>
       </DialogContent>
     </Dialog>
