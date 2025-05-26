@@ -21,7 +21,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  // DialogTrigger, // No longer needed here for dynamic triggers
 } from "@/components/ui/dialog";
 import { formatDistanceToNow } from 'date-fns';
 import React, { useState, forwardRef } from 'react';
@@ -91,7 +90,11 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
         <CardHeader className="pb-3 pt-4 px-5 border-b border-border/60">
           <div className="flex justify-between items-start gap-3">
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg font-semibold mb-1 leading-tight truncate" title={note.title}>
+              <CardTitle
+                className="text-lg font-semibold mb-1 leading-tight truncate cursor-pointer hover:text-primary hover:underline"
+                title={`Editar: ${note.title}`}
+                onClick={() => onEdit(note)}
+              >
                 <HighlightedText text={note.title} highlight={displaySearchTerm} />
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
@@ -116,11 +119,10 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {note.images.slice(0,6).map((src, index) => (
-                  // Removed DialogTrigger here
                   <div
                     key={index}
                     className="relative aspect-video rounded border overflow-hidden group bg-muted/30 cursor-pointer"
-                    onClick={() => openImageInModal(src)} // Programmatically open dialog
+                    onClick={() => openImageInModal(src)}
                     title="Haz clic para ver imagen completa"
                   >
                     {typeof src === 'string' && (src.startsWith('data:image') || src.startsWith('http')) ? (
@@ -219,7 +221,6 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
           </AlertDialog>
         </CardFooter>
       </Card>
-      {/* Single Dialog instance for image preview, controlled by state */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
         <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl p-2 h-auto max-h-[90vh]">
           {previewImageSrc && (
@@ -240,4 +241,3 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
 });
 
 NoteCard.displayName = 'NoteCard';
-

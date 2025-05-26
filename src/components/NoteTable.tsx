@@ -27,7 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Edit3, Trash2, Pin, PinOff, ArrowUpDown, SearchX, Inbox, ChevronUp, ChevronDown } from 'lucide-react';
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -44,24 +44,21 @@ interface SortConfig {
 }
 
 export function NoteTable({ onEditNote }: NoteTableProps) {
-  const { notes, deleteMultipleNotes, togglePinMultipleNotes, searchTerm: globalSearchTerm } = useNotes();
+  const { notes, deleteMultipleNotes, togglePinMultipleNotes } = useNotes();
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [tableFilter, setTableFilter] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
-  // Use globalSearchTerm if tableFilter is empty, otherwise use tableFilter
-  const activeFilterTerm = tableFilter.trim() !== '' ? tableFilter : globalSearchTerm;
-
   const filteredAndSortedNotes = useMemo(() => {
     let itemsToProcess = [...notes];
+    const currentTableFilter = tableFilter.trim().toLowerCase();
 
-    if (activeFilterTerm.trim() !== '') {
-      const lowercasedFilter = activeFilterTerm.toLowerCase();
+    if (currentTableFilter !== '') {
       itemsToProcess = itemsToProcess.filter(note => 
-        note.title.toLowerCase().includes(lowercasedFilter) ||
-        note.objective.toLowerCase().includes(lowercasedFilter) ||
-        note.notesArea.toLowerCase().includes(lowercasedFilter) ||
-        note.id.toLowerCase().includes(lowercasedFilter)
+        note.title.toLowerCase().includes(currentTableFilter) ||
+        note.objective.toLowerCase().includes(currentTableFilter) ||
+        note.notesArea.toLowerCase().includes(currentTableFilter) ||
+        note.id.toLowerCase().includes(currentTableFilter)
       );
     }
     
@@ -70,10 +67,12 @@ export function NoteTable({ onEditNote }: NoteTableProps) {
         let valA = a[sortConfig.key];
         let valB = b[sortConfig.key];
 
-        // Handle boolean sorting for isPinned
         if (sortConfig.key === 'isPinned') {
           valA = valA ? 1 : 0;
           valB = valB ? 1 : 0;
+        } else if (typeof valA === 'string' && typeof valB === 'string') {
+          valA = valA.toLowerCase();
+          valB = valB.toLowerCase();
         }
         
         if (valA < valB) {
@@ -82,13 +81,12 @@ export function NoteTable({ onEditNote }: NoteTableProps) {
         if (valA > valB) {
           return sortConfig.direction === 'asc' ? 1 : -1;
         }
-        // Secondary sort by date if primary keys are equal
         if (sortConfig.key !== 'createdAt') {
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         }
         return 0;
       });
-    } else { // Default sort by pinned then date if no sortConfig
+    } else { 
         itemsToProcess.sort((a,b) => {
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
@@ -96,7 +94,7 @@ export function NoteTable({ onEditNote }: NoteTableProps) {
         });
     }
     return itemsToProcess;
-  }, [notes, activeFilterTerm, sortConfig]);
+  }, [notes, tableFilter, sortConfig]);
 
 
   const handleSelectRow = (noteId: string) => {
@@ -122,7 +120,7 @@ export function NoteTable({ onEditNote }: NoteTableProps) {
   useEffect(() => { 
     const currentVisibleIds = new Set(filteredAndSortedNotes.map(n => n.id));
     setSelectedRowIds(prev => new Set([...prev].filter(id => currentVisibleIds.has(id))));
-  }, [activeFilterTerm, notes, sortConfig, filteredAndSortedNotes]);
+  }, [tableFilter, notes, sortConfig, filteredAndSortedNotes]);
 
 
   const requestSort = (key: SortableKey) => {
@@ -172,7 +170,11 @@ export function NoteTable({ onEditNote }: NoteTableProps) {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onEditNote(notes.find(n => n.id === selectedNotesArray[0])!)} // Should always find if selectedNotesArray[0] exists
+              onClick={() => {
+                  const noteToEdit = notes.find(n => n.id === selectedNotesArray[0]);
+                  if (noteToEdit) onEditNote(noteToEdit);
+                }
+              }
               disabled={selectedRowIds.size !== 1}
               className="h-9"
             >
@@ -222,12 +224,12 @@ export function NoteTable({ onEditNote }: NoteTableProps) {
         )}
       </div>
 
-      {filteredAndSortedNotes.length === 0 && activeFilterTerm && (
+      {filteredAndSortedNotes.length === 0 && tableFilter.trim() !== '' && (
         <div className="flex flex-col items-center justify-center text-center p-8 md:p-12 bg-card border border-border/60 rounded-xl shadow-sm mt-6">
             <SearchX className="h-16 w-16 text-destructive/80 mb-5 opacity-80" strokeWidth={1.2} />
             <h2 className="text-lg md:text-xl font-semibold text-foreground mb-2">No se Encontraron Notas en la Tabla</h2>
             <p className="text-muted-foreground max-w-xs text-sm md:text-base">
-            Ninguna nota coincide con tu filtro: "{activeFilterTerm}".
+            Ninguna nota coincide con tu filtro: "{tableFilter}".
             </p>
         </div>
       )}
@@ -278,7 +280,13 @@ export function NoteTable({ onEditNote }: NoteTableProps) {
                   <TableCell className="px-2 text-center">
                     {note.isPinned ? <Pin className="h-4 w-4 text-primary inline-block" /> : <PinOff className="h-4 w-4 text-muted-foreground/50 inline-block" />}
                   </TableCell>
-                  <TableCell className="font-medium truncate max-w-[250px]" title={note.title}>{note.title}</TableCell>
+                  <TableCell 
+                    className="font-medium truncate max-w-[250px] cursor-pointer hover:text-primary hover:underline" 
+                    title={`Editar: ${note.title}`}
+                    onClick={() => onEditNote(note)}
+                  >
+                    {note.title}
+                  </TableCell>
                   <TableCell className="text-muted-foreground truncate max-w-[300px]" title={note.objective}>{note.objective}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {format(parseISO(note.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
