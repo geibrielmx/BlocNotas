@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/form';
 import { useNotes } from '@/contexts/NoteContext';
 import { useEffect, useRef, useState } from 'react';
-import { FilePenLine, Edit, Bold, Italic, List, ListOrdered, Code, SquareCode, LinkIcon, ImagePlus, X, ZoomIn } from 'lucide-react';
+import { FilePenLine, Edit, Bold, Italic, List, ListOrdered, Code, SquareCode, LinkIcon, ImagePlus, X } from 'lucide-react';
 import NextImage from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 
@@ -51,7 +51,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   const notesAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const { toast } = useToast();
-  
+
   const form = useForm<NoteFormData>({
     resolver: zodResolver(noteSchema),
     defaultValues: {
@@ -112,7 +112,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
     const end = textarea.selectionEnd;
     const currentText = textarea.value;
     const selectedText = currentText.substring(start, end);
-    
+
     let newTextValue;
     let cursorStart;
     let cursorEnd;
@@ -126,7 +126,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
       cursorStart = start + syntaxStart.length;
       cursorEnd = cursorStart + placeholderText.length;
     }
-    
+
     form.setValue('notesArea', newTextValue, { shouldValidate: true, shouldDirty: true });
 
     setTimeout(() => {
@@ -143,7 +143,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
     const end = textarea.selectionEnd;
     const currentText = textarea.value;
     const selectedText = currentText.substring(start, end);
-    
+
     let newTextValue;
     let finalCursorPosition;
 
@@ -152,11 +152,11 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
       const formattedLines = lines.map(line => {
           const trimmedLine = line.trimStart();
           if (trimmedLine.startsWith('- ') || trimmedLine.match(/^\d+\.\s/)) {
-              return line; 
+              return line;
           }
           return `${prefix}${line}`;
       }).join('\n');
-      
+
       newTextValue = `${currentText.substring(0, start)}${formattedLines}${currentText.substring(end)}`;
       finalCursorPosition = start + formattedLines.length;
     } else {
@@ -170,13 +170,13 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
       const currentLineContent = textAfterCursorLine.split('\n')[0];
       if (currentLineContent.trimStart().startsWith('- ') || currentLineContent.trimStart().match(/^\d+\.\s/)) {
         newTextValue = `${textBeforeCursorLine}${currentLineContent}\n${prefix}${textAfterCursorLine.substring(currentLineContent.length)}`;
-        finalCursorPosition = start + prefix.length + 1; 
+        finalCursorPosition = start + prefix.length + 1;
       } else {
         newTextValue = `${textBeforeCursorLine}${prefix}${textAfterCursorLine}`;
         finalCursorPosition = lineStartIndex + prefix.length + (start - lineStartIndex);
       }
     }
-    
+
     form.setValue('notesArea', newTextValue, { shouldValidate: true, shouldDirty: true });
     setTimeout(() => {
       textarea.focus();
@@ -214,31 +214,12 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
         };
         reader.readAsDataURL(file);
       });
-      event.target.value = ""; 
+      event.target.value = "";
     }
   };
 
   const removeImage = (indexToRemove: number) => {
     setImagePreviews(prev => prev.filter((_, index) => index !== indexToRemove));
-  };
-
-  const openImagePreview = (src: string) => {
-    if (typeof src === 'string' && (src.startsWith('data:image') || src.startsWith('http'))) {
-      const newTab = window.open(src, '_blank');
-      if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
-          toast({
-            title: "Error al Abrir Imagen",
-            description: "No se pudo abrir la imagen en una nueva pestaña. Es posible que tu navegador haya bloqueado la ventana emergente.",
-            variant: "destructive",
-          });
-      }
-    } else {
-      toast({
-        title: "Error de Imagen",
-        description: "La fuente de la imagen seleccionada no es válida para abrir.",
-        variant: "destructive",
-      });
-    }
   };
 
   const markdownToolbar = (
@@ -317,10 +298,10 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                     {markdownToolbar}
                     <FormControl>
                       <Textarea
-                        {...field} 
+                        {...field}
                         ref={(e) => {
-                          field.ref(e); 
-                          notesAreaRef.current = e; 
+                          field.ref(e);
+                          notesAreaRef.current = e;
                         }}
                         placeholder="Anota tus ideas, detalles, fragmentos de código y cualquier información relevante... Puedes usar Markdown para formatear, ¡incluyendo tablas!"
                         rows={8}
@@ -352,33 +333,27 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                 {imagePreviews.length > 0 && (
                   <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     {imagePreviews.map((src, index) => (
-                      <div 
-                        key={index} 
-                        className="relative group aspect-square border rounded-md overflow-hidden shadow-sm bg-muted/30 cursor-pointer"
-                        title="Haz clic para ver imagen completa / Eliminar"
-                        onClick={() => openImagePreview(src)}
+                      <div
+                        key={index}
+                        className="relative group aspect-square border rounded-md overflow-hidden shadow-sm bg-muted/30"
+                        title="Previsualización / Eliminar"
                       >
-                        <NextImage 
-                          src={src} 
-                          alt={`Previsualización ${index + 1}`} 
-                          fill
-                          sizes="(max-width: 640px) 50vw, 200px" // Provide sizes for responsiveness
-                          style={{ objectFit: 'contain' }}
-                          onError={(e) => console.error("NoteForm NextImage Error:", e.currentTarget.currentSrc)}
+                        <NextImage
+                          src={src}
+                          alt={`Previsualización ${index + 1}`}
+                          layout="fill"
+                          objectFit="contain"
                         />
                         <Button
                           type="button"
                           variant="destructive"
                           size="icon"
                           className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity p-0 z-10"
-                          onClick={(e) => { e.stopPropagation(); removeImage(index); }} // Stop propagation to prevent opening
+                          onClick={() => { removeImage(index); }}
                           title="Eliminar imagen"
                         >
                           <X className="h-3.5 w-3.5" />
                         </Button>
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                          <ZoomIn className="h-6 w-6 text-white/70" />
-                        </div>
                       </div>
                     ))}
                   </div>
@@ -402,5 +377,3 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
     </Dialog>
   );
 }
-
-    

@@ -59,7 +59,7 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
 
   const formattedDate = formatDistanceToNow(new Date(note.createdAt), { addSuffix: true });
   const displaySearchTerm = searchTerm?.trim();
-  const notesPreviewLength = 180; 
+  const notesPreviewLength = 180;
 
   const notesPreviewText = note.notesArea.substring(0, notesPreviewLength) + (note.notesArea.length > notesPreviewLength ? '...' : '');
   const highlightedPreview = highlightTextInMarkdown(notesPreviewText, displaySearchTerm);
@@ -88,7 +88,7 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
             <HighlightedText text={note.objective} highlight={displaySearchTerm} />
           </p>
         </div>
-        
+
         {note.images && note.images.length > 0 && (
           <div className="border-t border-border/50 pt-3">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center">
@@ -100,19 +100,9 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
                   key={index}
                   className="relative aspect-video rounded border overflow-hidden group bg-muted/30 cursor-pointer"
                   onClick={() => {
-                    console.log("NoteCard: Intentando abrir imagen. Tipo:", typeof src, "Valor empieza con:", src ? src.substring(0, 70) + "..." : "N/A");
                     if (typeof src === 'string' && (src.startsWith('data:image') || src.startsWith('http'))) {
-                      const newTab = window.open(src, '_blank');
-                      if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
-                          console.error("NoteCard: La nueva pestaña fue bloqueada o no se pudo abrir.");
-                          toast({
-                            title: "Error al Abrir Imagen",
-                            description: "No se pudo abrir la imagen en una nueva pestaña. Es posible que tu navegador haya bloqueado la ventana emergente o que la URL de la imagen no sea válida para navegación.",
-                            variant: "destructive",
-                          });
-                      }
+                      window.open(src, '_blank');
                     } else {
-                      console.warn("NoteCard: No se pudo abrir la imagen, src inválido o no es un string. Src:", src);
                       toast({
                         title: "Error de Imagen",
                         description: "La fuente de la imagen seleccionada no es válida para abrir.",
@@ -123,15 +113,13 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
                   title="Haz clic para ver imagen completa"
                 >
                   {typeof src === 'string' && (src.startsWith('data:image') || src.startsWith('http')) ? (
-                    <NextImage 
-                      src={src} 
-                      alt={`Imagen adjunta ${index + 1}`} 
-                      fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 200px" // Provide sizes for responsiveness
-                      style={{ objectFit: 'contain' }}
+                    <NextImage
+                      src={src}
+                      alt={`Imagen adjunta ${index + 1}`}
+                      layout="fill"
+                      objectFit="contain"
                       className="transition-transform duration-300 ease-in-out group-hover:scale-105 transform-gpu"
                       data-ai-hint="illustration abstract"
-                      onError={(e) => console.error("NoteCard NextImage Error:", e.currentTarget.currentSrc)}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No válida</div>
@@ -161,11 +149,11 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
               </>
             )}
           </div>
-          {note.notesArea.length > notesPreviewLength && ( 
-             <Button 
-                variant="link" 
-                size="sm" 
-                onClick={() => setIsExpanded(!isExpanded)} 
+          {note.notesArea.length > notesPreviewLength && (
+             <Button
+                variant="link"
+                size="sm"
+                onClick={() => setIsExpanded(!isExpanded)}
                 className="p-0 h-auto text-primary hover:text-primary/80 text-xs mt-1.5 flex items-center gap-1"
               >
              {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
@@ -233,5 +221,3 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
 });
 
 NoteCard.displayName = 'NoteCard';
-
-    
