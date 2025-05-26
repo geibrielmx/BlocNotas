@@ -6,10 +6,10 @@ import type { Note } from '@/types';
 import { useNotes } from '@/contexts/NoteContext';
 import { NoteForm } from './NoteForm';
 import { NoteList } from './NoteList';
-import { NoteTable } from './NoteTable'; 
+import { NoteTable } from './NoteTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, PlusCircle, Search, Upload, Eraser, Save, List as ListIcon, TableIcon, BookOpenText } from 'lucide-react';
+import { Download, PlusCircle, Search, Upload, Eraser, List as ListIcon, TableIcon, BookOpenText } from 'lucide-react';
 import { convertNotesToJson, downloadTextFile } from '@/lib/note-utils';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 
-const APP_VERSION = "v1.5.0"; 
+const APP_VERSION = "v1.5.0";
 type ViewMode = 'cards' | 'table';
 
 export function NoteSphereApp() {
@@ -68,21 +68,6 @@ export function NoteSphereApp() {
       toast({ title: "Exportación Fallida", description: "No se pudieron exportar las notas.", variant: "destructive" });
     }
   };
-  
-  const handleSaveChanges = () => {
-    if (notes.length === 0) {
-      toast({ title: "Sin Cambios para Guardar", description: "No hay notas para guardar y exportar.", variant: "default" });
-      return;
-    }
-    try {
-      const jsonData = convertNotesToJson(notes);
-      downloadTextFile('notesphere_pro_export.json', jsonData, 'application/json');
-      toast({ title: "Cambios Guardados y Exportados", description: "El estado actual de tus notas ha sido exportado a notesphere_pro_export.json." });
-    } catch (error) {
-      console.error("Error al guardar y exportar:", error);
-      toast({ title: "Error al Guardar", description: "No se pudieron guardar y exportar las notas.", variant: "destructive" });
-    }
-  };
 
   const handleImportButtonClick = () => {
     fileInputRef.current?.click();
@@ -110,7 +95,7 @@ export function NoteSphereApp() {
       };
       reader.readAsText(file);
       if (fileInputRef.current) {
-        fileInputRef.current.value = ""; 
+        fileInputRef.current.value = "";
       }
     }
   };
@@ -131,19 +116,19 @@ export function NoteSphereApp() {
               <h1 className="text-xl md:text-2xl font-semibold text-foreground tracking-tight">Bloc de Notas Pro</h1>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant={viewMode === 'cards' ? 'secondary' : 'outline'} 
-                size="sm" 
-                onClick={() => setViewMode('cards')} 
+              <Button
+                variant={viewMode === 'cards' ? 'secondary' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('cards')}
                 title="Vista de Tarjetas"
                 className="h-9"
               >
                 <ListIcon className="h-4 w-4 md:mr-1.5"/> <span className="hidden md:inline">Tarjetas</span>
               </Button>
-              <Button 
-                variant={viewMode === 'table' ? 'secondary' : 'outline'} 
-                size="sm" 
-                onClick={() => setViewMode('table')} 
+              <Button
+                variant={viewMode === 'table' ? 'secondary' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('table')}
                 title="Vista de Tabla"
                 className="h-9"
               >
@@ -154,7 +139,7 @@ export function NoteSphereApp() {
 
           {/* Fila 2: Búsqueda (solo para CardView) */}
           {viewMode === 'cards' && (
-            <div className="w-full"> 
+            <div className="w-full">
               <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -178,16 +163,12 @@ export function NoteSphereApp() {
               type="file"
               ref={fileInputRef}
               onChange={handleFileSelected}
-              accept="application/json" 
+              accept="application/json"
               className="hidden"
             />
             <Button onClick={handleImportButtonClick} variant="outline" size="sm" className="shadow-sm h-9">
               <Upload className="h-4 w-4 sm:mr-1.5" />
               <span className="hidden sm:inline">Importar</span>
-            </Button>
-            <Button onClick={handleSaveChanges} variant="outline" size="sm" className="shadow-sm h-9">
-              <Save className="h-4 w-4 sm:mr-1.5" />
-              <span className="hidden sm:inline">Guardar</span>
             </Button>
             <Button onClick={handleExportNotes} variant="outline" size="sm" className="shadow-sm h-9">
               <Download className="h-4 w-4 sm:mr-1.5" />
@@ -295,22 +276,22 @@ export function NoteSphereApp() {
         .markdown-content code {
           background-color: hsl(var(--muted));
           padding: 0.2em 0.4em;
-          border-radius: 3px; 
+          border-radius: 3px;
           font-family: var(--font-geist-mono);
-          font-size: 0.9em; 
+          font-size: 0.9em;
         }
         .markdown-content pre {
           background-color: hsl(var(--muted));
-          padding: 0.8em 1em; 
-          border-radius: var(--radius); 
+          padding: 0.8em 1em;
+          border-radius: var(--radius);
           overflow-x: auto;
-          border: 1px solid hsl(var(--border)); 
+          border: 1px solid hsl(var(--border));
         }
         .markdown-content pre code {
           background-color: transparent;
           padding: 0;
-          font-size: 0.875em; 
-          border: none; 
+          font-size: 0.875em;
+          border: none;
         }
         .markdown-content blockquote {
           border-left: 4px solid hsl(var(--border));
@@ -318,11 +299,11 @@ export function NoteSphereApp() {
           margin-left: 0;
           color: hsl(var(--muted-foreground));
         }
-        .markdown-content h1, 
-        .markdown-content h2, 
-        .markdown-content h3, 
-        .markdown-content h4, 
-        .markdown-content h5, 
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4,
+        .markdown-content h5,
         .markdown-content h6 {
           margin-top: 1.2em;
           margin-bottom: 0.6em;
@@ -333,7 +314,7 @@ export function NoteSphereApp() {
         .markdown-content h3 { font-size: 1.25em; }
 
         .note-table-row:hover {
-          background-color: hsl(var(--muted) / 0.5) !important; 
+          background-color: hsl(var(--muted) / 0.5) !important;
         }
       `}</style>
     </div>
