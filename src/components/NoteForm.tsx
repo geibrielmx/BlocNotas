@@ -244,7 +244,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   useEffect(() => {
     const currentTextarea = notesAreaRef.current;
     const handlePaste = (event: ClipboardEvent) => {
-      if (!isOpen) return;
+      if (!isOpen || !currentTextarea) return; // Check if textarea is available
 
       const items = event.clipboardData?.items;
       if (items) {
