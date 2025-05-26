@@ -265,9 +265,8 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
             {noteToEdit ? 'Modifica los detalles de tu nota existente.' : 'Completa los detalles para crear una nueva nota.'}
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}> {/* Pass form methods to FormProvider */}
-          {/* handleSubmit is called on the button, not the form directly here because DialogFooter is outside form structure needed for scroll */}
-          <div className="space-y-4 px-1 flex-1 overflow-y-auto pr-2 custom-scrollbar pb-4">
+        <Form {...form}>
+          <div className="space-y-4 px-1 flex-1 overflow-y-auto pr-2 custom-scrollbar pb-20"> {/* Aumentado padding inferior */}
             <FormField
               control={form.control}
               name="title"
@@ -371,3 +370,4 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
     </Dialog>
   );
 }
+
