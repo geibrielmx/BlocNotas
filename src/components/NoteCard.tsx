@@ -5,7 +5,7 @@
 import type { Note } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Pin, PinOff, Edit3, Trash2, Sparkles, Maximize2, Minimize2, Image as ImageIcon, ZoomIn } from 'lucide-react'; // ImageIcon from Lucide, Added ZoomIn
+import { Pin, PinOff, Edit3, Trash2, Sparkles, Maximize2, Minimize2, Image as ImageIcon, ZoomIn } from 'lucide-react';
 import { useNotes } from '@/contexts/NoteContext';
 import {
   AlertDialog,
@@ -24,7 +24,8 @@ import { escapeRegExp, highlightTextInMarkdown } from '@/lib/note-utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import NextImage from 'next/image'; // Using NextImage for optimized images
+import NextImage from 'next/image';
+import { useToast } from "@/hooks/use-toast";
 
 interface NoteCardProps {
   note: Note;
@@ -54,6 +55,7 @@ function HighlightedText({ text, highlight }: { text: string; highlight?: string
 export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdit, searchTerm }, ref) => {
   const { deleteNote, togglePinNote, setSelectedNoteIdForAI } = useNotes();
   const [isExpanded, setIsExpanded] = useState(false);
+  const { toast } = useToast();
 
   const formattedDate = formatDistanceToNow(new Date(note.createdAt), { addSuffix: true });
   const displaySearchTerm = searchTerm?.trim();
@@ -98,20 +100,38 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
                   key={index}
                   className="relative aspect-video rounded border overflow-hidden group bg-muted/30 cursor-pointer"
                   onClick={() => {
+                    console.log("NoteCard: Intentando abrir imagen. Tipo:", typeof src, "Valor empieza con:", src ? src.substring(0, 70) + "..." : "N/A");
                     if (typeof src === 'string' && (src.startsWith('data:image') || src.startsWith('http'))) {
-                      window.open(src, '_blank');
+                      const newTab = window.open(src, '_blank');
+                      if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+                          console.error("NoteCard: La nueva pestaña fue bloqueada o no se pudo abrir.");
+                          toast({
+                            title: "Error al Abrir Imagen",
+                            description: "No se pudo abrir la imagen en una nueva pestaña. Es posible que tu navegador haya bloqueado la ventana emergente o que la URL de la imagen no sea válida para navegación.",
+                            variant: "destructive",
+                          });
+                      }
+                    } else {
+                      console.warn("NoteCard: No se pudo abrir la imagen, src inválido o no es un string. Src:", src);
+                      toast({
+                        title: "Error de Imagen",
+                        description: "La fuente de la imagen seleccionada no es válida para abrir.",
+                        variant: "destructive",
+                      });
                     }
                   }}
                   title="Haz clic para ver imagen completa"
                 >
-                  {typeof src === 'string' && src.startsWith('data:image') ? (
+                  {typeof src === 'string' && (src.startsWith('data:image') || src.startsWith('http')) ? (
                     <NextImage 
                       src={src} 
                       alt={`Imagen adjunta ${index + 1}`} 
-                      layout="fill" 
-                      objectFit="contain"
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 200px" // Provide sizes for responsiveness
+                      style={{ objectFit: 'contain' }}
                       className="transition-transform duration-300 ease-in-out group-hover:scale-105 transform-gpu"
                       data-ai-hint="illustration abstract"
+                      onError={(e) => console.error("NoteCard NextImage Error:", e.currentTarget.currentSrc)}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No válida</div>
@@ -214,3 +234,4 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
 
 NoteCard.displayName = 'NoteCard';
 
+    

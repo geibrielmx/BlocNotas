@@ -27,16 +27,15 @@ import {
 } from '@/components/ui/form';
 import { useNotes } from '@/contexts/NoteContext';
 import { useEffect, useRef, useState } from 'react';
-import { FilePenLine, Edit, Bold, Italic, List, ListOrdered, Code, SquareCode, LinkIcon, ImagePlus, X } from 'lucide-react';
-import NextImage from 'next/image'; // Aliased to avoid conflict
+import { FilePenLine, Edit, Bold, Italic, List, ListOrdered, Code, SquareCode, LinkIcon, ImagePlus, X, ZoomIn } from 'lucide-react';
+import NextImage from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 
-// Zod schema updated to include optional images array of strings (Data URIs)
 const noteSchema = z.object({
   title: z.string().min(1, 'El título es obligatorio').max(100, 'El título debe tener 100 caracteres o menos'),
   objective: z.string().min(1, 'El objetivo es obligatorio').max(200, 'El objetivo debe tener 200 caracteres o menos'),
   notesArea: z.string().min(1, 'El área de notas no puede estar vacía'),
-  images: z.array(z.string()).optional(), // Assuming data URIs are strings. URL validation might be too strict for data URIs directly.
+  images: z.array(z.string()).optional(),
 });
 
 type NoteFormData = z.infer<typeof noteSchema>;
@@ -50,7 +49,7 @@ interface NoteFormProps {
 export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   const { addNote, updateNote } = useNotes();
   const notesAreaRef = useRef<HTMLTextAreaElement | null>(null);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]); // State to hold Data URIs for previews
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const { toast } = useToast();
   
   const form = useForm<NoteFormData>({
@@ -70,11 +69,11 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
           title: noteToEdit.title,
           objective: noteToEdit.objective,
           notesArea: noteToEdit.notesArea,
-          images: noteToEdit.images || [], // Use existing images
+          images: noteToEdit.images || [],
         });
-        setImagePreviews(noteToEdit.images || []); // Set previews for existing images
+        setImagePreviews(noteToEdit.images || []);
       } else {
-        form.reset({ // Reset for new note
+        form.reset({
           title: '',
           objective: '',
           notesArea: '',
@@ -86,7 +85,6 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   }, [noteToEdit, form, isOpen]);
 
   const onSubmit = (data: NoteFormData) => {
-    // Use imagePreviews for saving, as it's the source of truth for displayed/managed images
     const noteDataWithImages = {
       ...data,
       images: imagePreviews,
@@ -96,12 +94,12 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
     } else {
       addNote(noteDataWithImages);
     }
-    onOpenChange(false); // Close dialog
+    onOpenChange(false);
   };
 
   const handleOpenChange = (open: boolean) => {
     onOpenChange(open);
-    if (!open) { // Reset previews when dialog closes
+    if (!open) {
       setImagePreviews([]);
     }
   };
@@ -200,24 +198,22 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
       }
 
       Array.from(files).forEach(file => {
-        if (file.size > 2 * 1024 * 1024) { // 2MB limit per image
+        if (file.size > 2 * 1024 * 1024) {
            toast({
             title: "Imagen Demasiado Grande",
             description: `La imagen "${file.name}" supera el límite de 2MB y no será añadida.`,
             variant: "destructive",
           });
-          return; // Skip this file
+          return;
         }
         const reader = new FileReader();
         reader.onloadend = () => {
           if (reader.result) {
             setImagePreviews(prev => [...prev, reader.result as string]);
-            // No need to call form.setValue here if onSubmit uses imagePreviews
           }
         };
         reader.readAsDataURL(file);
       });
-      // Reset file input to allow selecting the same file again if removed
       event.target.value = ""; 
     }
   };
@@ -226,6 +222,24 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
     setImagePreviews(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
+  const openImagePreview = (src: string) => {
+    if (typeof src === 'string' && (src.startsWith('data:image') || src.startsWith('http'))) {
+      const newTab = window.open(src, '_blank');
+      if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+          toast({
+            title: "Error al Abrir Imagen",
+            description: "No se pudo abrir la imagen en una nueva pestaña. Es posible que tu navegador haya bloqueado la ventana emergente.",
+            variant: "destructive",
+          });
+      }
+    } else {
+      toast({
+        title: "Error de Imagen",
+        description: "La fuente de la imagen seleccionada no es válida para abrir.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const markdownToolbar = (
     <div className="flex flex-wrap gap-1 mb-2 p-1 border border-border rounded-md bg-background shadow-sm">
@@ -267,7 +281,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-            <div className="space-y-4 px-6 flex-1 overflow-y-auto custom-scrollbar pb-4"> {/* Contenido desplazable */}
+            <div className="space-y-4 px-6 flex-1 overflow-y-auto custom-scrollbar pb-4">
               <FormField
                 control={form.control}
                 name="title"
@@ -327,7 +341,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                       multiple
                       accept="image/png, image/jpeg, image/gif, image/webp"
                       onChange={handleImageUpload}
-                      className="hidden" // Visually hidden, triggered by button
+                      className="hidden"
                     />
                     <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('imageUpload')?.click()}>
                       <ImagePlus className="h-4 w-4 sm:mr-1.5" />
@@ -338,25 +352,41 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                 {imagePreviews.length > 0 && (
                   <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     {imagePreviews.map((src, index) => (
-                      <div key={index} className="relative group aspect-square border rounded-md overflow-hidden shadow-sm bg-muted/30">
-                        <NextImage src={src} alt={`Previsualización ${index + 1}`} layout="fill" objectFit="contain" />
+                      <div 
+                        key={index} 
+                        className="relative group aspect-square border rounded-md overflow-hidden shadow-sm bg-muted/30 cursor-pointer"
+                        title="Haz clic para ver imagen completa / Eliminar"
+                        onClick={() => openImagePreview(src)}
+                      >
+                        <NextImage 
+                          src={src} 
+                          alt={`Previsualización ${index + 1}`} 
+                          fill
+                          sizes="(max-width: 640px) 50vw, 200px" // Provide sizes for responsiveness
+                          style={{ objectFit: 'contain' }}
+                          onError={(e) => console.error("NoteForm NextImage Error:", e.currentTarget.currentSrc)}
+                        />
                         <Button
                           type="button"
                           variant="destructive"
                           size="icon"
-                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity p-0"
-                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity p-0 z-10"
+                          onClick={(e) => { e.stopPropagation(); removeImage(index); }} // Stop propagation to prevent opening
+                          title="Eliminar imagen"
                         >
                           <X className="h-3.5 w-3.5" />
                         </Button>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                          <ZoomIn className="h-6 w-6 text-white/70" />
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
-                 <FormMessage>{/* form.formState.errors.images?.message - RHF doesn't directly manage imagePreviews state */}</FormMessage>
+                 <FormMessage>{/* RHF doesn't directly manage imagePreviews state */}</FormMessage>
               </FormItem>
             </div>
-            <DialogFooter className="pt-4 gap-2 sm:gap-0 bg-card py-3 border-t px-6"> {/* Pie de página normal */}
+            <DialogFooter className="pt-4 gap-2 sm:gap-0 bg-card py-3 border-t px-6">
               <DialogClose asChild>
                 <Button type="button" variant="outline" size="default">
                   Cancelar
@@ -373,3 +403,4 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   );
 }
 
+    
