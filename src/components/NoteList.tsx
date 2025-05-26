@@ -11,9 +11,10 @@ import React, { useEffect, useRef } from 'react';
 
 interface NoteListProps {
   onEditNote: (note: Note) => void;
+  onFocusView: (note: Note) => void;
 }
 
-export function NoteList({ onEditNote }: NoteListProps) {
+export function NoteList({ onEditNote, onFocusView }: NoteListProps) {
   const { notes, searchTerm, setSearchTerm } = useNotes();
   const firstMatchRef = useRef<HTMLDivElement>(null);
 
@@ -80,6 +81,7 @@ export function NoteList({ onEditNote }: NoteListProps) {
             key={note.id} 
             note={note} 
             onEdit={() => onEditNote(note)} 
+            onFocusView={() => onFocusView(note)}
             searchTerm={searchTerm.trim()}
             ref={index === 0 && searchTerm.trim() ? firstMatchRef : null}
         />

@@ -9,7 +9,7 @@ import { NoteList } from './NoteList';
 import { NoteTable } from './NoteTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, PlusCircle, Search, Upload, Eraser, List as ListIcon, TableIcon, BookOpenText } from 'lucide-react';
+import { Download, PlusCircle, Search, Upload, Eraser, List as ListIcon, TableIcon, Maximize2 } from 'lucide-react';
 import { convertNotesToJson, downloadTextFile } from '@/lib/note-utils';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -23,9 +23,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle as ModalTitle, // Renamed to avoid conflict
+  DialogDescription as ModalDescription, // Renamed to avoid conflict
+  DialogClose,
+} from '@/components/ui/dialog';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import NextImage from 'next/image';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
-const APP_VERSION = "v1.6.0";
+const APP_VERSION = "v1.7.0";
 type ViewMode = 'cards' | 'table';
 
 export function NoteSphereApp() {
@@ -34,6 +47,12 @@ export function NoteSphereApp() {
   const [noteToEdit, setNoteToEdit] = useState<Note | null>(null);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  
+  const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
+  const [noteInFocus, setNoteInFocus] = useState<Note | null>(null);
+  const [imagePreviewModalSrc, setImagePreviewModalSrc] = useState<string | null>(null);
+  const [isImagePreviewModalOpen, setIsImagePreviewModalOpen] = useState(false);
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,6 +71,16 @@ export function NoteSphereApp() {
   const handleEditNote = (note: Note) => {
     setNoteToEdit(note);
     setIsFormOpen(true);
+  };
+
+  const handleOpenFocusModal = (note: Note) => {
+    setNoteInFocus(note);
+    setIsFocusModalOpen(true);
+  };
+
+  const openImagePreviewInModal = (src: string) => {
+    setImagePreviewModalSrc(src);
+    setIsImagePreviewModalOpen(true);
   };
 
   const handleExportNotes = () => {
@@ -112,7 +141,7 @@ export function NoteSphereApp() {
           {/* Fila 1: Logo, Título y Selector de Vista */}
           <div className="flex items-center justify-between">
             <div className="flex items-center justify-start gap-2.5">
-            <BookOpenText className="h-7 w-7 md:h-8 md:w-8 text-primary" strokeWidth={1.75} />
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open-text"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/><path d="M6 8h2"/><path d="M6 12h2"/><path d="M16 8h2"/><path d="M16 12h2"/></svg>
               <h1 className="text-xl md:text-2xl font-semibold text-foreground tracking-tight">Bloc de Notas Pro</h1>
             </div>
             <div className="flex items-center gap-2">
@@ -136,7 +165,7 @@ export function NoteSphereApp() {
               </Button>
             </div>
           </div>
-
+          
           {/* Fila 2: Búsqueda (solo para CardView) */}
           {viewMode === 'cards' && (
             <div className="w-full">
@@ -207,9 +236,9 @@ export function NoteSphereApp() {
       <main className="flex-1 flex overflow-hidden container mx-auto py-6 md:py-8 gap-6 md:gap-8">
         <div className="flex-1 overflow-y-auto pr-2 scroll-smooth rounded-lg custom-scrollbar">
           {viewMode === 'cards' ? (
-            <NoteList onEditNote={handleEditNote} />
+            <NoteList onEditNote={handleEditNote} onFocusView={handleOpenFocusModal} />
           ) : (
-            <NoteTable onEditNote={handleEditNote} />
+            <NoteTable onEditNote={handleEditNote} onFocusView={handleOpenFocusModal} />
           )}
         </div>
       </main>
@@ -220,12 +249,87 @@ export function NoteSphereApp() {
         </p>
       </footer>
 
-
       <NoteForm
         isOpen={isFormOpen}
         onOpenChange={setIsFormOpen}
         noteToEdit={noteToEdit}
       />
+
+      {/* Modal para vista de enfoque de nota */}
+      {noteInFocus && (
+        <Dialog open={isFocusModalOpen} onOpenChange={setIsFocusModalOpen}>
+          <DialogContent className="sm:max-w-2xl md:max-w-4xl lg:max-w-5xl max-h-[90vh] flex flex-col p-0">
+            <DialogHeader className="p-6 pb-4 border-b">
+              <ModalTitle className="text-2xl font-bold text-primary">{noteInFocus.title}</ModalTitle>
+              <ModalDescription className="text-sm text-muted-foreground pt-1">
+                <span className="font-semibold">Objetivo:</span> {noteInFocus.objective}
+              </ModalDescription>
+            </DialogHeader>
+            <ScrollArea className="flex-1 custom-scrollbar">
+              <div className="p-6 space-y-6">
+                {noteInFocus.images && noteInFocus.images.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Imágenes Adjuntas:</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {noteInFocus.images.map((src, index) => (
+                        <div
+                          key={index}
+                          className="relative aspect-video rounded-md border overflow-hidden group bg-muted/30 cursor-pointer"
+                          onClick={() => openImagePreviewInModal(src)}
+                          title="Haz clic para ver imagen completa"
+                        >
+                          <NextImage
+                            src={src}
+                            alt={`Imagen adjunta ${index + 1}`}
+                            fill
+                            sizes="(max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
+                            style={{ objectFit: 'contain' }}
+                            className="transition-transform duration-300 ease-in-out group-hover:scale-105"
+                          />
+                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Maximize2 className="h-8 w-8 text-white/80" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">Notas Detalladas:</h4>
+                  <div className="prose prose-sm max-w-none markdown-content bg-background p-4 rounded-md border border-border/70">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                      {noteInFocus.notesArea}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+            <div className="p-4 border-t flex justify-end">
+              <DialogClose asChild>
+                <Button variant="outline">Cerrar</Button>
+              </DialogClose>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Modal para previsualización de imagen individual */}
+      <Dialog open={isImagePreviewModalOpen} onOpenChange={setIsImagePreviewModalOpen}>
+        <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl p-2 h-auto max-h-[90vh]">
+          {imagePreviewModalSrc && (
+            <div className="relative w-full h-full aspect-video max-h-[85vh]">
+              <NextImage
+                src={imagePreviewModalSrc}
+                alt="Previsualización de imagen ampliada"
+                fill
+                sizes="90vw"
+                style={{ objectFit: 'contain' }}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 8px;
@@ -273,12 +377,13 @@ export function NoteSphereApp() {
         .markdown-content li {
           margin-bottom: 0.25rem;
         }
-        .markdown-content code {
+        .markdown-content code:not(pre > code) { /* Apply to inline code only */
           background-color: hsl(var(--muted));
           padding: 0.2em 0.4em;
           border-radius: 3px;
           font-family: var(--font-geist-mono);
           font-size: 0.9em;
+          border: 1px solid hsl(var(--border)/0.7);
         }
         .markdown-content pre {
           background-color: hsl(var(--muted));
@@ -315,6 +420,45 @@ export function NoteSphereApp() {
 
         .note-table-row:hover {
           background-color: hsl(var(--muted) / 0.5) !important;
+        }
+        /* Tailwind Prose Overrides for better focus modal content */
+        .prose {
+          --tw-prose-body: hsl(var(--foreground));
+          --tw-prose-headings: hsl(var(--primary));
+          --tw-prose-lead: hsl(var(--muted-foreground));
+          --tw-prose-links: hsl(var(--primary));
+          --tw-prose-bold: hsl(var(--foreground));
+          --tw-prose-counters: hsl(var(--muted-foreground));
+          --tw-prose-bullets: hsl(var(--border));
+          --tw-prose-hr: hsl(var(--border));
+          --tw-prose-quotes: hsl(var(--primary));
+          --tw-prose-quote-borders: hsl(var(--border));
+          --tw-prose-captions: hsl(var(--muted-foreground));
+          --tw-prose-code: hsl(var(--primary));
+          --tw-prose-pre-code: hsl(var(--foreground));
+          --tw-prose-pre-bg: hsl(var(--muted));
+          --tw-prose-th-borders: hsl(var(--border));
+          --tw-prose-td-borders: hsl(var(--border));
+          
+          --tw-prose-invert-body: hsl(var(--foreground));
+          --tw-prose-invert-headings: hsl(var(--primary));
+          --tw-prose-invert-lead: hsl(var(--muted-foreground));
+          --tw-prose-invert-links: hsl(var(--primary));
+          --tw-prose-invert-bold: hsl(var(--foreground));
+          --tw-prose-invert-counters: hsl(var(--muted-foreground));
+          --tw-prose-invert-bullets: hsl(var(--border));
+          --tw-prose-invert-hr: hsl(var(--border));
+          --tw-prose-invert-quotes: hsl(var(--primary));
+          --tw-prose-invert-quote-borders: hsl(var(--border));
+          --tw-prose-invert-captions: hsl(var(--muted-foreground));
+          --tw-prose-invert-code: hsl(var(--primary));
+          --tw-prose-invert-pre-code: hsl(var(--foreground));
+          --tw-prose-invert-pre-bg: hsl(var(--muted));
+          --tw-prose-invert-th-borders: hsl(var(--border));
+          --tw-prose-invert-td-borders: hsl(var(--border));
+        }
+        .prose code::before, .prose code::after {
+          content: none; /* Remove backticks from prose code elements */
         }
       `}</style>
     </div>

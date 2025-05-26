@@ -34,6 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 interface NoteCardProps {
   note: Note;
   onEdit: (note: Note) => void;
+  onFocusView: (note: Note) => void;
   searchTerm?: string;
 }
 
@@ -56,7 +57,7 @@ function HighlightedText({ text, highlight }: { text: string; highlight?: string
   );
 }
 
-export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdit, searchTerm }, ref) => {
+export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdit, onFocusView, searchTerm }, ref) => {
   const { deleteNote, togglePinNote } = useNotes();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -180,6 +181,16 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => onFocusView(note)}
+            aria-label="Ver nota en detalle"
+            title="Ver nota en detalle"
+            className="text-muted-foreground hover:text-primary hover:bg-primary/10 w-8 h-8"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => togglePinNote(note.id)}
             aria-label={note.isPinned ? 'Desfijar nota' : 'Fijar nota'}
             title={note.isPinned ? 'Desfijar nota' : 'Fijar nota'}
@@ -221,6 +232,7 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
           </AlertDialog>
         </CardFooter>
       </Card>
+      {/* Este Dialog es para la previsualización de imagen individual */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
         <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl p-2 h-auto max-h-[90vh]">
           {previewImageSrc && (
@@ -241,3 +253,4 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
 });
 
 NoteCard.displayName = 'NoteCard';
+

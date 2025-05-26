@@ -26,13 +26,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Edit3, Trash2, Pin, PinOff, ArrowUpDown, SearchX, Inbox, ChevronUp, ChevronDown } from 'lucide-react';
+import { Edit3, Trash2, Pin, PinOff, ArrowUpDown, SearchX, Inbox, ChevronUp, ChevronDown, Maximize2 } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface NoteTableProps {
   onEditNote: (note: Note) => void;
+  onFocusView: (note: Note) => void;
 }
 
 type SortableKey = 'title' | 'objective' | 'createdAt' | 'isPinned';
@@ -43,7 +44,7 @@ interface SortConfig {
   direction: SortDirection;
 }
 
-export function NoteTable({ onEditNote }: NoteTableProps) {
+export function NoteTable({ onEditNote, onFocusView }: NoteTableProps) {
   const { notes, deleteMultipleNotes, togglePinMultipleNotes } = useNotes();
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [tableFilter, setTableFilter] = useState('');
@@ -259,7 +260,7 @@ export function NoteTable({ onEditNote }: NoteTableProps) {
                 <TableHead className="cursor-pointer hover:bg-muted/80 transition-colors min-w-[150px]" onClick={() => requestSort('createdAt')}>
                    <div className="flex items-center">Creado {getSortIcon('createdAt')}</div>
                 </TableHead>
-                <TableHead className="w-[100px] text-right pr-4">Acciones</TableHead>
+                <TableHead className="w-[120px] text-right pr-4">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -291,7 +292,10 @@ export function NoteTable({ onEditNote }: NoteTableProps) {
                   <TableCell className="text-muted-foreground text-xs">
                     {format(parseISO(note.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
                   </TableCell>
-                  <TableCell className="text-right pr-4">
+                  <TableCell className="text-right pr-4 space-x-1">
+                    <Button variant="ghost" size="icon" onClick={() => onFocusView(note)} className="h-8 w-8 hover:bg-accent hover:text-accent-foreground" title="Ver nota en detalle">
+                      <Maximize2 className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => onEditNote(note)} className="h-8 w-8 hover:bg-accent hover:text-accent-foreground" title="Editar Nota">
                       <Edit3 className="h-4 w-4" />
                     </Button>
@@ -305,3 +309,4 @@ export function NoteTable({ onEditNote }: NoteTableProps) {
     </div>
   );
 }
+
