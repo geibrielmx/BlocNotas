@@ -2,7 +2,7 @@
 "use client";
 
 import type { Note } from '@/types';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
   DialogFooter,
   DialogClose,
   DialogDescription,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -27,7 +28,7 @@ import {
 } from '@/components/ui/form';
 import { useNotes } from '@/contexts/NoteContext';
 import { useEffect, useRef, useState } from 'react';
-import { FilePenLine, Edit, Bold, Italic, List, ListOrdered, Code, SquareCode, LinkIcon, ImagePlus, X } from 'lucide-react';
+import { FilePenLine, Edit, Bold, Italic, List, ListOrdered, Code, SquareCode, LinkIcon, ImagePlus, X, ZoomIn } from 'lucide-react';
 import NextImage from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 
@@ -50,6 +51,8 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   const { addNote, updateNote } = useNotes();
   const notesAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [isFormPreviewModalOpen, setIsFormPreviewModalOpen] = useState(false);
+  const [formPreviewImageSrc, setFormPreviewImageSrc] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<NoteFormData>({
@@ -222,6 +225,19 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
     setImagePreviews(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
+  const openImagePreviewModal = (src: string) => {
+    if (typeof src === 'string' && (src.startsWith('data:image') || src.startsWith('http'))) {
+        setFormPreviewImageSrc(src);
+        setIsFormPreviewModalOpen(true);
+    } else {
+        toast({
+            title: "Error de Imagen",
+            description: "La fuente de la imagen seleccionada no es válida para previsualizar.",
+            variant: "destructive",
+        });
+    }
+  };
+
   const markdownToolbar = (
     <div className="flex flex-wrap gap-1 mb-2 p-1 border border-border rounded-md bg-background shadow-sm">
       <Button type="button" variant="outline" size="sm" className="px-2 h-8" onClick={() => applyMarkdownFormatting('**', '**', 'negrita')} title="Negrita (Ctrl+B)">
@@ -249,6 +265,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
   );
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col bg-card text-card-foreground shadow-xl rounded-lg border border-border/90 p-0">
         <DialogHeader className="pb-3 pt-5 px-6">
@@ -333,35 +350,41 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                 {imagePreviews.length > 0 && (
                   <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     {imagePreviews.map((src, index) => (
-                      <div
-                        key={index}
-                        className="relative group aspect-square border rounded-md overflow-hidden shadow-sm bg-muted/30"
-                        title="Previsualización / Eliminar"
-                      >
-                        <NextImage
-                          src={src}
-                          alt={`Previsualización ${index + 1}`}
-                          layout="fill"
-                          objectFit="contain"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity p-0 z-10"
-                          onClick={() => { removeImage(index); }}
-                          title="Eliminar imagen"
+                      <DialogTrigger key={index} asChild>
+                        <div
+                          className="relative group aspect-square border rounded-md overflow-hidden shadow-sm bg-muted/30 cursor-pointer"
+                          title="Haz clic para ver imagen completa / Botón X para eliminar"
+                          onClick={() => openImagePreviewModal(src)}
                         >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                          <NextImage
+                            src={src}
+                            alt={`Previsualización ${index + 1}`}
+                            fill
+                            sizes="(max-width: 768px) 50vw, 200px"
+                            style={{ objectFit: 'contain' }}
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity p-0 z-10"
+                            onClick={(e) => { e.stopPropagation(); removeImage(index); }}
+                            title="Eliminar imagen"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                            <ZoomIn className="h-8 w-8 text-white/80" />
+                          </div>
+                        </div>
+                      </DialogTrigger>
                     ))}
                   </div>
                 )}
                  <FormMessage>{/* RHF doesn't directly manage imagePreviews state */}</FormMessage>
               </FormItem>
             </div>
-            <DialogFooter className="pt-4 gap-2 sm:gap-0 bg-card py-3 border-t px-6">
+            <DialogFooter className="bg-card py-3 border-t px-6 pt-4 gap-2 sm:gap-0">
               <DialogClose asChild>
                 <Button type="button" variant="outline" size="default">
                   Cancelar
@@ -375,5 +398,21 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
         </Form>
       </DialogContent>
     </Dialog>
+    <Dialog open={isFormPreviewModalOpen} onOpenChange={setIsFormPreviewModalOpen}>
+        <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl p-2 h-auto max-h-[90vh]">
+          {formPreviewImageSrc && (
+            <div className="relative w-full h-full aspect-video max-h-[85vh]">
+              <NextImage
+                src={formPreviewImageSrc}
+                alt="Previsualización de imagen ampliada desde formulario"
+                fill
+                sizes="90vw"
+                style={{ objectFit: 'contain' }}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

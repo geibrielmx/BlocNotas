@@ -4,15 +4,13 @@
 import type { Note } from '@/types';
 import { createContext, useContext, useState, type ReactNode, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { generateNoteId } from '@/lib/note-utils';
+import { generateNoteId, convertNotesToJson } from '@/lib/note-utils'; // Removed parseCsvRow, escapeCsvField, convertNotesToCsv
 import { useToast } from "@/hooks/use-toast";
 
 interface NoteContextType {
   notes: Note[];
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  selectedNoteIdForAI: string | null;
-  setSelectedNoteIdForAI: (id: string | null) => void;
   addNote: (noteData: Omit<Note, 'id' | 'createdAt' | 'isPinned'>) => void;
   updateNote: (updatedNote: Note) => void;
   deleteNote: (id: string) => void;
@@ -20,8 +18,6 @@ interface NoteContextType {
   togglePinNote: (id: string) => void;
   togglePinMultipleNotes: (ids: string[], pin: boolean) => void;
   getNoteById: (id: string) => Note | undefined;
-  isLoading: boolean;
-  setIsLoading: (loading: boolean) => void;
   importNotes: (jsonString: string) => void;
   clearAllNotes: () => void;
 }
@@ -31,10 +27,8 @@ const NoteContext = createContext<NoteContextType | undefined>(undefined);
 const initialNotes: Note[] = [];
 
 export function NoteProvider({ children }: { children: ReactNode }) {
-  const [notes, setNotes] = useLocalStorage<Note[]>('notesphere-notes-json', initialNotes); // Changed key for JSON storage
+  const [notes, setNotes] = useLocalStorage<Note[]>('notesphere-notes-json', initialNotes);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedNoteIdForAI, setSelectedNoteIdForAI] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const sortNotes = (notesToSort: Note[]): Note[] => {
@@ -67,21 +61,15 @@ export function NoteProvider({ children }: { children: ReactNode }) {
   const deleteNote = useCallback((id: string) => {
     const noteToDelete = notes.find(n => n.id === id);
     setNotes(prevNotes => prevNotes.filter(note => note.id !== id));
-    if (selectedNoteIdForAI === id) {
-        setSelectedNoteIdForAI(null);
-    }
     if (noteToDelete) {
      toast({ title: "Nota Eliminada", description: `La nota "${noteToDelete.title}" ha sido eliminada.`, variant: "destructive" });
     }
-  }, [notes, setNotes, toast, selectedNoteIdForAI, setSelectedNoteIdForAI]);
+  }, [notes, setNotes, toast]);
 
   const deleteMultipleNotes = useCallback((ids: string[]) => {
     setNotes(prevNotes => prevNotes.filter(note => !ids.includes(note.id)));
-    if (ids.includes(selectedNoteIdForAI || "")) {
-        setSelectedNoteIdForAI(null);
-    }
     toast({ title: `${ids.length} Notas Eliminadas`, description: `Se han eliminado ${ids.length} notas.`, variant: "destructive" });
-  }, [setNotes, toast, selectedNoteIdForAI, setSelectedNoteIdForAI]);
+  }, [setNotes, toast]);
 
 
   const togglePinNote = useCallback((id: string) => {
@@ -119,90 +107,94 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let parsedData;
     try {
-      const parsedNotes = JSON.parse(jsonString);
-
-      if (!Array.isArray(parsedNotes)) {
-        toast({ title: "Error de Formato", description: "El archivo no contiene un array de notas JSON válido.", variant: "destructive" });
-        return;
-      }
-
-      let importedCount = 0;
-      let updatedCount = 0;
-      let skippedCount = 0;
-      const notesFromImportProcessing: Note[] = [];
-
-      for (const importedObj of parsedNotes) {
-        // Basic validation for a Note object
-        if (
-          typeof importedObj.id === 'string' &&
-          typeof importedObj.title === 'string' &&
-          typeof importedObj.objective === 'string' &&
-          typeof importedObj.notesArea === 'string' &&
-          typeof importedObj.createdAt === 'string' &&
-          typeof importedObj.isPinned === 'boolean' &&
-          (importedObj.images === undefined || (Array.isArray(importedObj.images) && importedObj.images.every((img: any) => typeof img === 'string'))) && // Validate images array
-          !isNaN(new Date(importedObj.createdAt).getTime())
-        ) {
-          const noteToAdd: Note = {
-            id: importedObj.id,
-            title: importedObj.title,
-            objective: importedObj.objective,
-            notesArea: importedObj.notesArea,
-            createdAt: importedObj.createdAt,
-            isPinned: importedObj.isPinned,
-            images: importedObj.images || [], // Ensure images is an array
-          };
-          notesFromImportProcessing.push(noteToAdd);
-        } else {
-          skippedCount++;
-          console.warn("Objeto omitido durante la importación JSON por formato inválido o fecha incorrecta:", importedObj);
-        }
-      }
-
-      if (notesFromImportProcessing.length === 0 && skippedCount > 0) {
-        toast({ title: "Importación Fallida", description: `No se pudieron importar notas válidas. Se omitieron ${skippedCount} objetos debido a errores de formato. Revisa el archivo JSON y la consola.`, variant: "destructive", duration: 12000 });
-        return;
-      }
-      if (notesFromImportProcessing.length === 0 && parsedNotes.length > 0) { // Check if parsedNotes had items
-        toast({ title: "Sin Notas Válidas", description: "No se encontraron notas válidas para importar en el archivo JSON.", variant: "default" });
-        return;
-      }
-      
-      setNotes(prevNotes => {
-        const currentNotesMap = new Map(prevNotes.map(note => [note.id, note]));
-        notesFromImportProcessing.forEach(importedNote => {
-          if (currentNotesMap.has(importedNote.id)) {
-            updatedCount++;
-          } else {
-            importedCount++;
-          }
-          currentNotesMap.set(importedNote.id, importedNote);
-        });
-        return sortNotes(Array.from(currentNotesMap.values()));
-      });
-
-      let summaryMessage = `${importedCount} notas importadas, ${updatedCount} notas actualizadas.`;
-      if (skippedCount > 0) {
-        summaryMessage += ` ${skippedCount} objetos fueron omitidos por formato inválido.`;
-      }
-      toast({ title: "Importación Completada", description: summaryMessage, duration: 10000 });
-
+      parsedData = JSON.parse(jsonString);
     } catch (error) {
-      console.error("Error crítico durante la importación de notas JSON:", error);
-      toast({ title: "Error Crítico de Importación", description: "Ocurrió un error al procesar el archivo JSON. Asegúrate de que el formato sea correcto.", variant: "destructive", duration: 10000 });
+      console.error("Error crítico durante la importación de notas JSON (parseo):", error);
+      toast({ title: "Error de Formato", description: "El archivo JSON no es válido y no pudo ser procesado. Revisa la consola para más detalles.", variant: "destructive", duration: 10000 });
+      return;
     }
-  }, [setNotes, toast]);
+
+    if (!Array.isArray(parsedData)) {
+      toast({ title: "Error de Formato", description: "El archivo no contiene un array de notas JSON válido.", variant: "destructive" });
+      return;
+    }
+
+    let importedCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    const notesFromImportProcessing: Note[] = [];
+    const existingNoteIds = new Set(notes.map(n => n.id));
+
+
+    for (const importedObj of parsedData) {
+      if (
+        typeof importedObj.id === 'string' &&
+        typeof importedObj.title === 'string' &&
+        typeof importedObj.objective === 'string' &&
+        typeof importedObj.notesArea === 'string' &&
+        typeof importedObj.createdAt === 'string' &&
+        typeof importedObj.isPinned === 'boolean' &&
+        (importedObj.images === undefined || (Array.isArray(importedObj.images) && importedObj.images.every((img: any) => typeof img === 'string'))) &&
+        !isNaN(new Date(importedObj.createdAt).getTime())
+      ) {
+        const noteToAdd: Note = {
+          id: importedObj.id,
+          title: importedObj.title,
+          objective: importedObj.objective,
+          notesArea: importedObj.notesArea,
+          createdAt: importedObj.createdAt,
+          isPinned: importedObj.isPinned,
+          images: importedObj.images || [],
+        };
+        notesFromImportProcessing.push(noteToAdd);
+        if (existingNoteIds.has(noteToAdd.id)) {
+          updatedCount++;
+        } else {
+          importedCount++;
+        }
+      } else {
+        skippedCount++;
+        console.warn("Objeto omitido durante la importación JSON por formato inválido, fecha incorrecta o campos faltantes:", importedObj);
+      }
+    }
+    
+    if (notesFromImportProcessing.length === 0 && parsedData.length > 0) {
+         toast({ title: "Sin Notas Válidas", description: `No se encontraron notas válidas para importar. Se omitieron ${skippedCount} objetos debido a errores de formato.`, variant: "default", duration: 7000 });
+        return;
+    }
+     if (notesFromImportProcessing.length === 0 && parsedData.length === 0 && jsonString.trim() !== "[]") {
+        toast({ title: "Importación Fallida", description: "El archivo parece contener datos, pero no se pudieron procesar notas válidas.", variant: "destructive", duration: 7000 });
+        return;
+    }
+
+
+    setNotes(prevNotes => {
+      const currentNotesMap = new Map(prevNotes.map(note => [note.id, note]));
+      notesFromImportProcessing.forEach(importedNote => {
+        currentNotesMap.set(importedNote.id, importedNote);
+      });
+      return sortNotes(Array.from(currentNotesMap.values()));
+    });
+
+    let summaryMessage = `${importedCount} nota(s) importada(s), ${updatedCount} nota(s) actualizada(s).`;
+    if (skippedCount > 0) {
+      summaryMessage += ` ${skippedCount} objeto(s) fueron omitido(s) por formato inválido.`;
+    }
+    toast({ title: "Importación Completada", description: summaryMessage, duration: 10000 });
+
+  }, [setNotes, toast, notes]);
+
 
   const clearAllNotes = useCallback(() => {
     setNotes([]);
-    setSelectedNoteIdForAI(null);
     toast({
       title: "Todas las Notas Eliminadas",
       description: "Tu Bloc de Notas ahora está vacío.",
       variant: "destructive",
     });
-  }, [setNotes, toast, setSelectedNoteIdForAI]);
+  }, [setNotes, toast]);
 
   return (
     <NoteContext.Provider
@@ -210,8 +202,6 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         notes,
         searchTerm,
         setSearchTerm,
-        selectedNoteIdForAI,
-        setSelectedNoteIdForAI,
         addNote,
         updateNote,
         deleteNote,
@@ -219,8 +209,6 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         togglePinNote,
         togglePinMultipleNotes,
         getNoteById,
-        isLoading,
-        setIsLoading,
         importNotes,
         clearAllNotes,
       }}

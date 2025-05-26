@@ -7,17 +7,11 @@ import { useNotes } from '@/contexts/NoteContext';
 import { NoteForm } from './NoteForm';
 import { NoteList } from './NoteList';
 import { NoteTable } from './NoteTable'; 
-import { AiSuggestions } from './AiSuggestions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, PlusCircle, Search, Sparkles, Upload, Eraser, Save, List as ListIcon, TableIcon, BookOpenText } from 'lucide-react';
+import { Download, PlusCircle, Search, Upload, Eraser, Save, List as ListIcon, TableIcon, BookOpenText } from 'lucide-react';
 import { convertNotesToJson, downloadTextFile } from '@/lib/note-utils';
 import { useToast } from "@/hooks/use-toast";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
 
 const APP_VERSION = "v1.5.0"; 
 type ViewMode = 'cards' | 'table';
@@ -115,7 +110,7 @@ export function NoteSphereApp() {
       };
       reader.readAsText(file);
       if (fileInputRef.current) {
-        fileInputRef.current.value = ""; // Reset file input
+        fileInputRef.current.value = ""; 
       }
     }
   };
@@ -160,7 +155,7 @@ export function NoteSphereApp() {
           {/* Fila 2: Búsqueda (solo para CardView) */}
           {viewMode === 'cards' && (
             <div className="w-full"> 
-              <div className="relative">
+              <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
@@ -224,19 +219,6 @@ export function NoteSphereApp() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" aria-label="Abrir/Cerrar Panel IA">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[clamp(300px,80vw,420px)] p-0 bg-card border-l border-border shadow-xl">
-                <div className="h-full flex flex-col">
-                    <AiSuggestions />
-                  </div>
-              </SheetContent>
-            </Sheet>
           </div>
         </div>
       </header>
@@ -249,9 +231,6 @@ export function NoteSphereApp() {
             <NoteTable onEditNote={handleEditNote} />
           )}
         </div>
-        <aside className="hidden md:block w-[360px] lg:w-[400px] transition-all duration-300 ease-in-out overflow-y-auto rounded-lg custom-scrollbar opacity-100 translate-x-0">
-           <AiSuggestions />
-        </aside>
       </main>
 
       <footer className="py-4 px-5 border-t border-border/80 bg-card text-center">
@@ -299,9 +278,6 @@ export function NoteSphereApp() {
           background-color: hsl(var(--secondary));
           font-weight: 600;
         }
-        /* .markdown-content tr:nth-child(even) {
-          background-color: hsl(var(--background)); // Removed to avoid conflict with table hover
-        } */
         .markdown-content tr:hover {
           background-color: hsl(var(--accent));
         }
@@ -356,9 +332,8 @@ export function NoteSphereApp() {
         .markdown-content h2 { font-size: 1.5em; }
         .markdown-content h3 { font-size: 1.25em; }
 
-        /* Specific styles for NoteTable hover to avoid conflict with markdown table hover */
         .note-table-row:hover {
-          background-color: hsl(var(--muted) / 0.5) !important; /* More specific */
+          background-color: hsl(var(--muted) / 0.5) !important; 
         }
       `}</style>
     </div>
