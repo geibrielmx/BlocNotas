@@ -10,7 +10,7 @@ import { NoteTable } from './NoteTable';
 import { AiSuggestions } from './AiSuggestions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, PlusCircle, Search, Sparkles, Upload, Eraser, Save, List as ListIcon, TableIcon } from 'lucide-react';
+import { Download, PlusCircle, Search, Sparkles, Upload, Eraser, Save, List as ListIcon, TableIcon, BookOpenText } from 'lucide-react';
 import { convertNotesToJson, downloadTextFile } from '@/lib/note-utils';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -132,12 +132,7 @@ export function NoteSphereApp() {
           {/* Fila 1: Logo, Título y Selector de Vista */}
           <div className="flex items-center justify-between">
             <div className="flex items-center justify-start gap-2.5">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 md:h-8 md:w-8">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                <line x1="12" y1="8" x2="12" y2="16" />
-                <line x1="8" y1="12" x2="16" y2="12" />
-              </svg>
+            <BookOpenText className="h-7 w-7 md:h-8 md:w-8 text-primary" strokeWidth={1.75} />
               <h1 className="text-xl md:text-2xl font-semibold text-foreground tracking-tight">Bloc de Notas Pro</h1>
             </div>
             <div className="flex items-center gap-2">
@@ -162,89 +157,86 @@ export function NoteSphereApp() {
             </div>
           </div>
 
-          {/* Fila 2: Búsqueda (para CardView) y Botones de Acción */}
-          <div className="flex flex-col gap-y-3 sm:flex-row sm:items-center sm:justify-between sm:gap-x-4">
-            {viewMode === 'cards' && (
-              <div className="flex-1 min-w-0"> 
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Buscar en tarjetas..."
-                    className="pl-10 pr-3 w-full bg-input border-border focus:ring-primary rounded-lg shadow-sm h-9 text-sm"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                  />
-                </div>
+          {/* Fila 2: Búsqueda (solo para CardView) */}
+          {viewMode === 'cards' && (
+            <div className="w-full"> 
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Buscar en tarjetas..."
+                  className="pl-10 pr-3 w-full bg-input border-border focus:ring-primary rounded-lg shadow-sm h-9 text-sm"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
               </div>
-            )}
-            {viewMode === 'table' && <div className="flex-1 min-w-0"></div> /* Placeholder to keep layout consistent */}
-
-
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-start sm:justify-end">
-              <Button onClick={handleAddNewNote} variant="default" size="sm" className="shadow-sm h-9">
-                <PlusCircle className="h-4 w-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Añadir Nota</span>
-              </Button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelected}
-                accept="application/json" 
-                className="hidden"
-              />
-              <Button onClick={handleImportButtonClick} variant="outline" size="sm" className="shadow-sm h-9">
-                <Upload className="h-4 w-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Importar</span>
-              </Button>
-              <Button onClick={handleSaveChanges} variant="outline" size="sm" className="shadow-sm h-9">
-                <Save className="h-4 w-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Guardar</span>
-              </Button>
-              <Button onClick={handleExportNotes} variant="outline" size="sm" className="shadow-sm h-9">
-                <Download className="h-4 w-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Exportar</span>
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" className="shadow-sm h-9">
-                    <Eraser className="h-4 w-4 sm:mr-1.5" />
-                    <span className="hidden sm:inline">Limpiar Todo</span>
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta acción no se puede deshacer. Se eliminarán permanentemente TODAS tus notas.
-                      ¿Estás seguro de que quieres continuar?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleClearAllNotesConfirmed}
-                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                    >
-                      Sí, eliminar todas las notas
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" aria-label="Abrir/Cerrar Panel IA">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[clamp(300px,80vw,420px)] p-0 bg-card border-l border-border shadow-xl">
-                  <div className="h-full flex flex-col">
-                      <AiSuggestions />
-                    </div>
-                </SheetContent>
-              </Sheet>
             </div>
+          )}
+
+          {/* Fila 3: Botones de Acción */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
+            <Button onClick={handleAddNewNote} variant="default" size="sm" className="shadow-sm h-9">
+              <PlusCircle className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Añadir Nota</span>
+            </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelected}
+              accept="application/json" 
+              className="hidden"
+            />
+            <Button onClick={handleImportButtonClick} variant="outline" size="sm" className="shadow-sm h-9">
+              <Upload className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Importar</span>
+            </Button>
+            <Button onClick={handleSaveChanges} variant="outline" size="sm" className="shadow-sm h-9">
+              <Save className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Guardar</span>
+            </Button>
+            <Button onClick={handleExportNotes} variant="outline" size="sm" className="shadow-sm h-9">
+              <Download className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Exportar</span>
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="shadow-sm h-9">
+                  <Eraser className="h-4 w-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Limpiar Todo</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acción no se puede deshacer. Se eliminarán permanentemente TODAS tus notas.
+                    ¿Estás seguro de que quieres continuar?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleClearAllNotesConfirmed}
+                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                  >
+                    Sí, eliminar todas las notas
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" aria-label="Abrir/Cerrar Panel IA">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[clamp(300px,80vw,420px)] p-0 bg-card border-l border-border shadow-xl">
+                <div className="h-full flex flex-col">
+                    <AiSuggestions />
+                  </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </header>
