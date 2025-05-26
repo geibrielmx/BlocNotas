@@ -16,7 +16,7 @@ import {
   DialogFooter,
   DialogClose,
   DialogDescription,
-  DialogTrigger,
+  // DialogTrigger, // No longer needed here for dynamic triggers
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -350,34 +350,34 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
                 {imagePreviews.length > 0 && (
                   <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     {imagePreviews.map((src, index) => (
-                      <DialogTrigger key={index} asChild>
-                        <div
-                          className="relative group aspect-square border rounded-md overflow-hidden shadow-sm bg-muted/30 cursor-pointer"
-                          title="Haz clic para ver imagen completa / Botón X para eliminar"
-                          onClick={() => openImagePreviewModal(src)}
+                      // Removed DialogTrigger here
+                      <div
+                        key={index}
+                        className="relative group aspect-square border rounded-md overflow-hidden shadow-sm bg-muted/30 cursor-pointer"
+                        title="Haz clic para ver imagen completa / Botón X para eliminar"
+                        onClick={() => openImagePreviewModal(src)} // Programmatically open dialog
+                      >
+                        <NextImage
+                          src={src}
+                          alt={`Previsualización ${index + 1}`}
+                          fill
+                          sizes="(max-width: 768px) 50vw, 200px"
+                          style={{ objectFit: 'contain' }}
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity p-0 z-10"
+                          onClick={(e) => { e.stopPropagation(); removeImage(index); }}
+                          title="Eliminar imagen"
                         >
-                          <NextImage
-                            src={src}
-                            alt={`Previsualización ${index + 1}`}
-                            fill
-                            sizes="(max-width: 768px) 50vw, 200px"
-                            style={{ objectFit: 'contain' }}
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity p-0 z-10"
-                            onClick={(e) => { e.stopPropagation(); removeImage(index); }}
-                            title="Eliminar imagen"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                            <ZoomIn className="h-8 w-8 text-white/80" />
-                          </div>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                          <ZoomIn className="h-8 w-8 text-white/80" />
                         </div>
-                      </DialogTrigger>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -398,6 +398,7 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
         </Form>
       </DialogContent>
     </Dialog>
+    {/* Single Dialog instance for image preview in form, controlled by state */}
     <Dialog open={isFormPreviewModalOpen} onOpenChange={setIsFormPreviewModalOpen}>
         <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl p-2 h-auto max-h-[90vh]">
           {formPreviewImageSrc && (
@@ -416,3 +417,4 @@ export function NoteForm({ isOpen, onOpenChange, noteToEdit }: NoteFormProps) {
     </>
   );
 }
+

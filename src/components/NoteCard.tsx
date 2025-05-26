@@ -21,7 +21,7 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogTrigger,
+  // DialogTrigger, // No longer needed here for dynamic triggers
 } from "@/components/ui/dialog";
 import { formatDistanceToNow } from 'date-fns';
 import React, { useState, forwardRef } from 'react';
@@ -116,30 +116,30 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {note.images.slice(0,6).map((src, index) => (
-                  <DialogTrigger key={index} asChild>
-                    <div
-                      className="relative aspect-video rounded border overflow-hidden group bg-muted/30 cursor-pointer"
-                      onClick={() => openImageInModal(src)}
-                      title="Haz clic para ver imagen completa"
-                    >
-                      {typeof src === 'string' && (src.startsWith('data:image') || src.startsWith('http')) ? (
-                        <NextImage
-                          src={src}
-                          alt={`Imagen adjunta ${index + 1}`}
-                          fill
-                          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 200px"
-                          style={{ objectFit: 'contain' }}
-                          className="transition-transform duration-300 ease-in-out group-hover:scale-105 transform-gpu"
-                          data-ai-hint="illustration abstract"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No válida</div>
-                      )}
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <ZoomIn className="h-8 w-8 text-white/80" />
-                      </div>
+                  // Removed DialogTrigger here
+                  <div
+                    key={index}
+                    className="relative aspect-video rounded border overflow-hidden group bg-muted/30 cursor-pointer"
+                    onClick={() => openImageInModal(src)} // Programmatically open dialog
+                    title="Haz clic para ver imagen completa"
+                  >
+                    {typeof src === 'string' && (src.startsWith('data:image') || src.startsWith('http')) ? (
+                      <NextImage
+                        src={src}
+                        alt={`Imagen adjunta ${index + 1}`}
+                        fill
+                        sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 200px"
+                        style={{ objectFit: 'contain' }}
+                        className="transition-transform duration-300 ease-in-out group-hover:scale-105 transform-gpu"
+                        data-ai-hint="illustration abstract"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No válida</div>
+                    )}
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <ZoomIn className="h-8 w-8 text-white/80" />
                     </div>
-                  </DialogTrigger>
+                  </div>
                 ))}
               </div>
               {note.images.length > 6 && <p className="text-xs text-muted-foreground mt-1.5">...y {note.images.length - 6} más.</p>}
@@ -219,6 +219,7 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
           </AlertDialog>
         </CardFooter>
       </Card>
+      {/* Single Dialog instance for image preview, controlled by state */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
         <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl p-2 h-auto max-h-[90vh]">
           {previewImageSrc && (
@@ -239,3 +240,4 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
 });
 
 NoteCard.displayName = 'NoteCard';
+
