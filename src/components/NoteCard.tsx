@@ -5,7 +5,7 @@
 import type { Note } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Pin, PinOff, Edit3, Trash2, Sparkles, Maximize2, Minimize2, Image as ImageIcon } from 'lucide-react'; // ImageIcon from Lucide
+import { Pin, PinOff, Edit3, Trash2, Sparkles, Maximize2, Minimize2, Image as ImageIcon, ZoomIn } from 'lucide-react'; // ImageIcon from Lucide, Added ZoomIn
 import { useNotes } from '@/contexts/NoteContext';
 import {
   AlertDialog,
@@ -93,23 +93,31 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
               <ImageIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" /> Imágenes Adjuntas:
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {note.images.slice(0,6).map((src, index) => ( // Show max 6 previews in card
-                <div key={index} className="relative aspect-video rounded border overflow-hidden group bg-muted/30">
-                  {/* Ensure src is a valid string for NextImage */}
+              {note.images.slice(0,6).map((src, index) => (
+                <div
+                  key={index}
+                  className="relative aspect-video rounded border overflow-hidden group bg-muted/30 cursor-pointer"
+                  onClick={() => {
+                    if (typeof src === 'string' && (src.startsWith('data:image') || src.startsWith('http'))) {
+                      window.open(src, '_blank');
+                    }
+                  }}
+                  title="Haz clic para ver imagen completa"
+                >
                   {typeof src === 'string' && src.startsWith('data:image') ? (
                     <NextImage 
                       src={src} 
                       alt={`Imagen adjunta ${index + 1}`} 
                       layout="fill" 
-                      objectFit="contain" // Use contain to see whole image
-                      className="group-hover:opacity-80 transition-opacity"
+                      objectFit="contain"
+                      className="transition-transform duration-300 ease-in-out group-hover:scale-105 transform-gpu"
                       data-ai-hint="illustration abstract"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No válida</div>
                   )}
-                   <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button variant="outline" size="sm" className="h-7 text-xs backdrop-blur-sm bg-background/50 hover:bg-background/70" onClick={() => window.open(src, '_blank')}>Ver</Button>
+                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <ZoomIn className="h-8 w-8 text-white/80" />
                   </div>
                 </div>
               ))}
@@ -205,3 +213,4 @@ export const NoteCard = forwardRef<HTMLDivElement, NoteCardProps>(({ note, onEdi
 });
 
 NoteCard.displayName = 'NoteCard';
+
